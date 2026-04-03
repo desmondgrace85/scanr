@@ -6,7 +6,6 @@
 <title>SCANR — Scan Documents Free</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet" />
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
@@ -17,12 +16,36 @@
 body { background: var(--bg); color: var(--text); font-family: 'Outfit', sans-serif; min-height: 100vh; -webkit-font-smoothing: antialiased; overflow-x: hidden; }
 .bebas { font-family: 'Bebas Neue', sans-serif; letter-spacing: 0.04em; }
 
-/* ── 3D CANVAS ── */
-#three-canvas { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
-
-/* ── GRID + NOISE ── */
+/* ── GLOWING GRID BACKGROUND ── */
 .bg-overlay { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
-.grid-lines { position: absolute; inset: 0; background-image: linear-gradient(rgba(200,255,0,0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(200,255,0,0.025) 1px, transparent 1px); background-size: 60px 60px; }
+.grid-lines {
+  position: absolute; inset: 0;
+  background-image:
+    linear-gradient(rgba(200,255,0,0.22) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(200,255,0,0.22) 1px, transparent 1px);
+  background-size: 60px 60px;
+}
+/* soft glow blur layer behind the lines */
+.grid-lines::before {
+  content: ''; position: absolute; inset: 0;
+  background-image:
+    linear-gradient(rgba(200,255,0,0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(200,255,0,0.07) 1px, transparent 1px);
+  background-size: 60px 60px;
+  filter: blur(4px);
+}
+/* glowing dots at every intersection */
+.grid-lines::after {
+  content: ''; position: absolute; inset: 0;
+  background-image: radial-gradient(circle, rgba(200,255,0,0.6) 1.5px, transparent 1.5px);
+  background-size: 60px 60px;
+  background-position: -1px -1px;
+}
+/* vignette so grid fades at edges and lets content breathe */
+.grid-vignette {
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse at center, transparent 30%, rgba(10,10,10,0.82) 100%);
+}
 
 /* ── NAV ── */
 nav { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; border-bottom: 1px solid #1a1a1a; position: sticky; top: 0; background: rgba(10,10,10,0.92); backdrop-filter: blur(16px); z-index: 100; }
@@ -39,7 +62,7 @@ nav { display: flex; align-items: center; justify-content: space-between; paddin
 .btn-ghost:hover { color: #fff; }
 .btn-icon { background: var(--surface2); border: 1px solid var(--border2); color: #ccc; padding: 10px 14px; border-radius: 8px; cursor: pointer; font-size: 13px; font-family: 'Outfit'; display: inline-flex; flex-direction: column; align-items: center; gap: 4px; transition: border-color .18s; min-width: 56px; }
 .btn-icon:hover { border-color: var(--lime); color: var(--lime); }
-.btn-icon svg, .btn-icon .ico { font-size: 18px; }
+.btn-icon .ico { font-size: 18px; }
 
 /* ── LAYOUT ── */
 .page { max-width: 480px; margin: 0 auto; padding: 0 16px; position: relative; z-index: 1; }
@@ -96,10 +119,8 @@ nav { display: flex; align-items: center; justify-content: space-between; paddin
 .cam-outer video { width: 100%; display: block; max-height: 55vh; object-fit: cover; }
 .cam-outer.id-mode video { max-height: 40vw; aspect-ratio: 85.6/54; object-fit: cover; width: 100%; }
 .cam-outer.passport-mode video { max-height: 60vw; aspect-ratio: 0.707/1; object-fit: cover; width: 100%; }
-
 .cam-idle { text-align: center; padding: 36px 20px; }
 .cam-idle p { color: #888; font-size: 13px; margin-bottom: 14px; }
-
 .cam-overlay { position: absolute; inset: 0; pointer-events: none; }
 .cam-scan-line { position: absolute; width: 100%; height: 2px; background: linear-gradient(90deg,transparent,var(--lime),transparent); animation: scanline 2s ease-in-out infinite; display: none; }
 .cam-corner { position: absolute; width: 20px; height: 20px; border-color: var(--lime); border-style: solid; display: none; }
@@ -114,7 +135,7 @@ nav { display: flex; align-items: center; justify-content: space-between; paddin
 
 /* ── CAPTURE BTN ── */
 .capture-row { display: flex; align-items: center; justify-content: center; gap: 16px; margin-bottom: 12px; }
-.capture-btn { width: 64px; height: 64px; border-radius: 50%; background: var(--lime); border: 4px solid rgba(200,255,0,0.3); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: transform .15s, background .15s; box-shadow: 0 0 0 0 rgba(200,255,0,0.4); animation: captureGlow 2s ease-in-out infinite; }
+.capture-btn { width: 64px; height: 64px; border-radius: 50%; background: var(--lime); border: 4px solid rgba(200,255,0,0.3); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: transform .15s, background .15s; animation: captureGlow 2s ease-in-out infinite; }
 .capture-btn:active { transform: scale(0.92); }
 @keyframes captureGlow { 0%,100%{box-shadow:0 0 0 0 rgba(200,255,0,.3)}50%{box-shadow:0 0 0 10px rgba(200,255,0,0)} }
 
@@ -181,7 +202,7 @@ nav { display: flex; align-items: center; justify-content: space-between; paddin
 .strip-add:hover{border-color:var(--lime);color:var(--lime)}
 .strip-add span{font-size:18px}
 
-/* ── SAVE FORMAT MODAL ── */
+/* ── FORMAT MODAL ── */
 .format-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
 .format-btn { background: var(--surface2); border: 1.5px solid var(--border2); border-radius: 10px; padding: 14px 10px; cursor: pointer; text-align: center; transition: border-color .18s, background .18s; font-family: 'Outfit'; }
 .format-btn:hover{border-color:var(--lime);background:#111500}
@@ -214,9 +235,46 @@ nav { display: flex; align-items: center; justify-content: space-between; paddin
 .field input { background: #1a1a1a; border: 1.5px solid #333; color: #fff; padding: 11px 14px; border-radius: 8px; font-size: 14px; font-family: 'Outfit'; outline: none; width: 100%; transition: border-color .18s; }
 .field input:focus{border-color:var(--lime)}
 
-/* ── USER CHIP ── */
-.user-chip { display: inline-flex; align-items: center; gap: 8px; background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 20px; padding: 5px 12px; font-size: 12px; color: #ccc; }
-.user-avatar { width: 22px; height: 22px; border-radius: 50%; background: var(--lime); display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: #0a0a0a; }
+/* ── USER CHIP — clickable ── */
+.user-chip { display: inline-flex; align-items: center; gap: 8px; background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 20px; padding: 5px 12px 5px 5px; font-size: 12px; color: #ccc; cursor: pointer; transition: border-color .18s, background .18s; -webkit-tap-highlight-color: transparent; user-select: none; }
+.user-chip:hover { border-color: var(--lime); background: #1e1e0d; }
+.user-chip:active { transform: scale(0.97); }
+.user-avatar { width: 26px; height: 26px; border-radius: 50%; background: var(--lime); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #0a0a0a; flex-shrink: 0; }
+.chip-caret { font-size: 9px; color: #555; margin-left: 2px; transition: transform .2s; }
+.user-chip.open .chip-caret { transform: rotate(180deg); }
+
+/* ── PROFILE SLIDE PANEL ── */
+.profile-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.65); z-index: 400; display: none; backdrop-filter: blur(4px); }
+.profile-backdrop.open { display: block; }
+.profile-panel { position: fixed; top: 0; right: 0; bottom: 0; width: min(320px, 92vw); background: #111; border-left: 1px solid #222; z-index: 401; transform: translateX(100%); transition: transform .28s cubic-bezier(.4,0,.2,1); overflow-y: auto; display: flex; flex-direction: column; }
+.profile-panel.open { transform: translateX(0); }
+.profile-header { padding: 18px 20px 16px; border-bottom: 1px solid #1e1e1e; display: flex; align-items: center; justify-content: space-between; background: #0f0f0f; flex-shrink: 0; }
+.profile-avatar-xl { width: 52px; height: 52px; border-radius: 50%; background: var(--lime); display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 700; color: #0a0a0a; flex-shrink: 0; box-shadow: 0 0 16px rgba(200,255,0,0.3); }
+.profile-close { background: none; border: none; color: #888; font-size: 22px; cursor: pointer; line-height: 1; padding: 4px 8px; transition: color .15s; }
+.profile-close:hover { color: #fff; }
+.profile-body { padding: 20px; flex: 1; }
+.profile-section { margin-bottom: 22px; }
+.profile-section-title { font-size: 10px; text-transform: uppercase; letter-spacing: .12em; color: #555; margin-bottom: 10px; }
+.profile-tile { background: #1a1a1a; border-radius: 10px; padding: 12px 14px; margin-bottom: 8px; }
+.profile-tile-row { display: flex; align-items: center; justify-content: space-between; }
+.profile-tile-label { font-size: 11px; color: #666; margin-bottom: 3px; }
+.profile-tile-value { font-size: 14px; font-weight: 600; color: #fff; }
+.profile-tile-btn { background: none; border: 1px solid #333; color: #aaa; font-size: 11px; padding: 5px 12px; border-radius: 6px; cursor: pointer; font-family: 'Outfit'; transition: border-color .18s, color .18s; white-space: nowrap; }
+.profile-tile-btn:hover { border-color: var(--lime); color: var(--lime); }
+.profile-expand { display: none; margin-top: 12px; flex-direction: column; gap: 8px; }
+.profile-expand.open { display: flex; }
+.profile-expand input { background: #111; border: 1.5px solid #333; color: #fff; padding: 9px 12px; border-radius: 7px; font-size: 13px; font-family: 'Outfit'; outline: none; width: 100%; transition: border-color .18s; }
+.profile-expand input:focus { border-color: var(--lime); }
+.profile-save-btn { background: var(--lime); color: #0a0a0a; border: none; padding: 9px; border-radius: 7px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: 'Outfit'; transition: background .15s; }
+.profile-save-btn:hover { background: #d9ff33; }
+.profile-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 22px; }
+.stat-box { background: #1a1a1a; border-radius: 10px; padding: 14px 12px; text-align: center; }
+.stat-num { font-family: 'Bebas Neue', sans-serif; font-size: 30px; color: var(--lime); line-height: 1; }
+.stat-label { font-size: 10px; color: #666; margin-top: 3px; }
+.profile-danger-zone { background: #1a0a0a; border: 1px solid #3a1515; border-radius: 10px; padding: 14px; }
+.profile-danger-zone p { font-size: 11px; color: #777; margin-bottom: 10px; line-height: 1.6; }
+.btn-danger { background: transparent; color: #ff5555; border: 1px solid #ff5555; padding: 9px 16px; border-radius: 7px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: 'Outfit'; width: 100%; transition: background .15s; }
+.btn-danger:hover { background: rgba(255,85,85,0.1); }
 
 /* ── DASHBOARD ── */
 .scans-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; }
@@ -239,20 +297,94 @@ nav { display: flex; align-items: center; justify-content: space-between; paddin
 
 /* ── MISC ── */
 .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.mt8{margin-top:8px}.mt12{margin-top:12px}.mt16{margin-top:16px}
+.mt12{margin-top:12px}
 .mb10{margin-bottom:10px}.mb14{margin-bottom:14px}
 .hint{text-align:center;font-size:11px;color:#555;margin-top:10px}
 .hint button{background:none;border:none;color:var(--lime);font-size:11px;cursor:pointer;font-family:'Outfit'}
-.section-hdr{display:flex;align-items:center;justify-content:space-between;margin:18px 0 14px}
-.section-hdr h2{font-family:'Bebas Neue',sans-serif;font-size:18px;color:var(--lime)}
 .divider{height:1px;background:var(--border);margin:14px 0}
+
+/* ── ANTI-INSPECT ── */
+body { -webkit-touch-callout: none; }
 </style>
 </head>
 <body>
 
-<!-- 3D CANVAS -->
-<canvas id="three-canvas"></canvas>
-<div class="bg-overlay"><div class="grid-lines"></div></div>
+<!-- GLOWING GRID -->
+<div class="bg-overlay">
+  <div class="grid-lines"></div>
+  <div class="grid-vignette"></div>
+</div>
+
+<!-- PROFILE PANEL -->
+<div class="profile-backdrop" id="profile-backdrop" onclick="closeProfile()"></div>
+<div class="profile-panel" id="profile-panel">
+  <div class="profile-header">
+    <div style="display:flex;align-items:center;gap:14px">
+      <div class="profile-avatar-xl" id="pp-avatar">U</div>
+      <div>
+        <div style="font-weight:600;font-size:15px;color:#fff" id="pp-name">Username</div>
+        <div style="font-size:11px;color:#555;margin-top:2px">Free Account</div>
+      </div>
+    </div>
+    <button class="profile-close" onclick="closeProfile()">×</button>
+  </div>
+  <div class="profile-body">
+
+    <!-- Stats -->
+    <div class="profile-stats">
+      <div class="stat-box"><div class="stat-num" id="pp-scan-count">0</div><div class="stat-label">Scans saved</div></div>
+      <div class="stat-box"><div class="stat-num">∞</div><div class="stat-label">Your limit</div></div>
+    </div>
+
+    <!-- Account -->
+    <div class="profile-section">
+      <div class="profile-section-title">Account Details</div>
+      <div class="profile-tile">
+        <div class="profile-tile-row">
+          <div>
+            <div class="profile-tile-label">Username</div>
+            <div class="profile-tile-value" id="pp-username-val">–</div>
+          </div>
+          <button class="profile-tile-btn" onclick="toggleExpandUsername()">Edit</button>
+        </div>
+        <div class="profile-expand" id="expand-username">
+          <input type="text" id="new-username-input" placeholder="New username" />
+          <button class="profile-save-btn" onclick="saveUsername()">Save Username</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Security -->
+    <div class="profile-section">
+      <div class="profile-section-title">Security</div>
+      <div class="profile-tile">
+        <div class="profile-tile-row">
+          <div>
+            <div class="profile-tile-label">Password</div>
+            <div class="profile-tile-value">••••••••</div>
+          </div>
+          <button class="profile-tile-btn" onclick="toggleExpandPassword()">Change</button>
+        </div>
+        <div class="profile-expand" id="expand-password">
+          <input type="password" id="pw-current" placeholder="Current password" />
+          <input type="password" id="pw-new" placeholder="New password (min 6)" />
+          <input type="password" id="pw-confirm" placeholder="Confirm new password" />
+          <button class="profile-save-btn" onclick="savePassword()">Update Password</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Danger -->
+    <div class="profile-section">
+      <div class="profile-section-title">Danger Zone</div>
+      <div class="profile-danger-zone">
+        <p>You will be signed out of your account on this device. Your saved scans will remain.</p>
+        <button class="btn-danger" onclick="signOut()">Sign Out</button>
+      </div>
+    </div>
+
+  </div>
+</div>
 
 <!-- TOAST -->
 <div class="save-toast" id="save-toast">✅ Saved successfully!</div>
@@ -295,13 +427,11 @@ nav { display: flex; align-items: center; justify-content: space-between; paddin
       <span style="color:var(--dim);font-size:12px">1 free scan · No account needed</span>
     </div>
   </div>
-
   <div class="features">
     <div class="card feature"><div class="feature-icon">📄</div><div class="feature-title">Documents</div><div class="feature-sub">IDs, contracts, forms</div></div>
     <div class="card feature"><div class="feature-icon">🎨</div><div class="feature-title">Filters</div><div class="feature-sub">B&W, enhance, vivid</div></div>
     <div class="card feature"><div class="feature-icon">⚡</div><div class="feature-title">Export</div><div class="feature-sub">PDF, JPG, PNG, DOCX</div></div>
   </div>
-
   <div class="privacy-bar">
     <span style="color:var(--lime);font-size:18px;flex-shrink:0">🔒</span>
     <div><h4>100% Private & Secure</h4><p>All processing happens in your browser. Nothing uploaded.</p></div>
@@ -314,8 +444,6 @@ nav { display: flex; align-items: center; justify-content: space-between; paddin
     <button class="btn-ghost" onclick="goTo('landing')">← Back</button>
     <span class="bebas" style="font-size:16px;color:var(--lime)">NEW SCAN</span>
   </div>
-
-  <!-- Type -->
   <div class="filter-label" style="margin-bottom:6px">What are you scanning?</div>
   <div class="scan-types" id="scan-types">
     <button class="scan-type-btn active" onclick="setScanType('document',this)">📄 Document</button>
@@ -323,23 +451,18 @@ nav { display: flex; align-items: center; justify-content: space-between; paddin
     <button class="scan-type-btn" onclick="setScanType('passport',this)">📘 Passport</button>
     <button class="scan-type-btn" onclick="setScanType('receipt',this)">🧾 Receipt</button>
   </div>
-
-  <!-- Sides (shown for ID) -->
   <div id="sides-row" style="display:none">
     <div class="filter-label" style="margin-bottom:6px">How many sides?</div>
     <div class="sides-toggle">
       <button class="sides-btn active" id="sides-one" onclick="setSides('one',this)">One Side</button>
       <button class="sides-btn" id="sides-two" onclick="setSides('two',this)">Two Sides (Front &amp; Back)</button>
     </div>
-    <!-- Two-side preview strip -->
     <div class="two-side-strip" id="two-side-strip" style="display:none">
       <div class="side-card active-side" id="side-front-card"><span class="side-label">Front</span></div>
       <div style="font-size:20px;color:#444">→</div>
       <div class="side-card" id="side-back-card"><span class="side-label">Back</span></div>
     </div>
   </div>
-
-  <!-- Pages count (for non-ID) -->
   <div id="pages-row">
     <div class="filter-label" style="margin-bottom:6px">How many pages?</div>
     <div class="sides-toggle">
@@ -347,16 +470,11 @@ nav { display: flex; align-items: center; justify-content: space-between; paddin
       <button class="sides-btn" id="cnt-multi" onclick="selectCount('multi',this)">Multiple Pages</button>
     </div>
   </div>
-
   <div class="divider"></div>
-
-  <!-- Camera / Upload tabs -->
   <div class="tabs">
     <button class="tab-btn active" id="tab-cam" onclick="switchTab('camera')"><span style="font-size:20px">📷</span><span>Camera</span></button>
     <button class="tab-btn" id="tab-upl" onclick="switchTab('upload')"><span style="font-size:20px">📁</span><span>Upload</span></button>
   </div>
-
-  <!-- Camera panel -->
   <div id="camera-panel">
     <div class="cam-outer" id="cam-outer">
       <div class="cam-idle" id="cam-idle">
@@ -383,8 +501,6 @@ nav { display: flex; align-items: center; justify-content: space-between; paddin
       <div class="scan-status" id="scan-status"></div>
     </div>
   </div>
-
-  <!-- Upload panel -->
   <div id="upload-panel" style="display:none">
     <div class="upload-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
       <div style="font-size:36px;margin-bottom:10px">📎</div>
@@ -425,16 +541,13 @@ nav { display: flex; align-items: center; justify-content: space-between; paddin
   </div>
 </div>
 
-<!-- ══ PREVIEW (single) ══ -->
+<!-- ══ PREVIEW ══ -->
 <div id="screen-preview" class="screen">
   <div style="display:flex;align-items:center;justify-content:space-between;margin:16px 0">
     <button class="btn-ghost" onclick="retake()">← Rescan</button>
     <span class="bebas" style="font-size:16px;color:var(--lime)">PREVIEW</span>
   </div>
-
   <canvas id="output-canvas"></canvas>
-
-  <!-- Edit toolbar -->
   <div class="edit-toolbar">
     <button class="btn-icon" onclick="retake()"><span class="ico">📷</span>Retake</button>
     <button class="btn-icon" onclick="goToCropFromPreview()"><span class="ico">✂️</span>Crop</button>
@@ -442,7 +555,6 @@ nav { display: flex; align-items: center; justify-content: space-between; paddin
     <button class="btn-icon" onclick="toggleFilters()"><span class="ico">🎨</span>Color</button>
     <button class="btn-icon" onclick="deletePreview()"><span class="ico">🗑️</span>Delete</button>
   </div>
-
   <div id="filter-panel" style="display:none">
     <div class="filter-label">Filter Mode</div>
     <div class="filters">
@@ -453,7 +565,6 @@ nav { display: flex; align-items: center; justify-content: space-between; paddin
       <button class="filter-btn" onclick="applyFilter('vivid',this)">Vivid</button>
     </div>
   </div>
-
   <div class="row">
     <button class="btn-outline" onclick="addPageFromPreview()">+ Add Page</button>
     <button class="btn-lime" onclick="openSaveModal('single')">⬇ Save & Share</button>
@@ -584,146 +695,124 @@ nav { display: flex; align-items: center; justify-content: space-between; paddin
 </div>
 
 <script>
-// ══ THREE.JS 3D BACKGROUND ══════════════════════════════
-(function() {
-  const canvas = document.getElementById('three-canvas');
-  const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.setClearColor(0x000000, 0);
-
-  const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
-  camera.position.z = 6;
-
-  // Lighting
-  const ambient = new THREE.AmbientLight(0xffffff, 0.3);
-  scene.add(ambient);
-  const lime = new THREE.PointLight(0xC8FF00, 2, 20);
-  lime.position.set(3, 3, 3);
-  scene.add(lime);
-  const teal = new THREE.PointLight(0x00ffcc, 1.5, 20);
-  teal.position.set(-3, -2, 2);
-  scene.add(teal);
-
-  // Create floating 3D objects
-  const objects = [];
-  const geometries = [
-    new THREE.TorusGeometry(0.4, 0.12, 16, 60),
-    new THREE.OctahedronGeometry(0.45),
-    new THREE.TorusKnotGeometry(0.3, 0.1, 80, 16),
-    new THREE.IcosahedronGeometry(0.4),
-    new THREE.TetrahedronGeometry(0.5),
-    new THREE.TorusGeometry(0.35, 0.08, 12, 50),
-    new THREE.OctahedronGeometry(0.35),
-    new THREE.IcosahedronGeometry(0.3),
-  ];
-
-  const matWire = new THREE.MeshStandardMaterial({ color: 0xC8FF00, metalness: 0.8, roughness: 0.2, wireframe: false, transparent: true, opacity: 0.5 });
-  const matSolid = new THREE.MeshStandardMaterial({ color: 0x00ffcc, metalness: 0.9, roughness: 0.1, transparent: true, opacity: 0.35 });
-
-  geometries.forEach((geo, i) => {
-    const mat = i % 2 === 0 ? matWire.clone() : matSolid.clone();
-    const mesh = new THREE.Mesh(geo, mat);
-    mesh.position.set(
-      (Math.random() - 0.5) * 12,
-      (Math.random() - 0.5) * 12,
-      (Math.random() - 0.5) * 4 - 2
-    );
-    mesh.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
-    const scale = 0.6 + Math.random() * 0.8;
-    mesh.scale.setScalar(scale);
-    const speed = { rx: (Math.random()-0.5)*0.008, ry: (Math.random()-0.5)*0.012, rz: (Math.random()-0.5)*0.006, fx: (Math.random()-0.5)*0.003, fy: (Math.random()-0.5)*0.004 };
-    objects.push({ mesh, speed, baseY: mesh.position.y, baseX: mesh.position.x });
-    scene.add(mesh);
-  });
-
-  // Scroll parallax
-  let scrollY = 0;
-  window.addEventListener('scroll', () => { scrollY = window.scrollY; });
-
-  let t = 0;
-  function animate() {
-    requestAnimationFrame(animate);
-    t += 0.01;
-    const parallax = scrollY * 0.003;
-
-    objects.forEach((obj, i) => {
-      obj.mesh.rotation.x += obj.speed.rx;
-      obj.mesh.rotation.y += obj.speed.ry;
-      obj.mesh.rotation.z += obj.speed.rz;
-      obj.mesh.position.y = obj.baseY + Math.sin(t + i * 0.8) * 0.4 - parallax * (0.5 + i * 0.1);
-      obj.mesh.position.x = obj.baseX + Math.cos(t * 0.7 + i * 0.5) * 0.2;
-    });
-
-    lime.position.x = Math.sin(t * 0.5) * 4;
-    lime.position.y = Math.cos(t * 0.3) * 3;
-    teal.position.x = Math.cos(t * 0.4) * 3;
-    teal.position.y = Math.sin(t * 0.6) * 4;
-
-    renderer.render(scene, camera);
-  }
-  animate();
-
-  window.addEventListener('resize', () => {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
-  });
-})();
-
 // ══ APP STATE ══════════════════════════════════════════
-let currentScreen = 'landing';
-let capturedImage = null;
-let activeFilter  = 'original';
-let videoStream   = null;
-let freeUsed      = parseInt(localStorage.getItem('scanr_free') || '0');
-let savedScans    = JSON.parse(localStorage.getItem('scanr_scans') || '[]');
-let isLoggedIn    = localStorage.getItem('scanr_user') === 'true';
-let scanType      = 'document';
-let scanCount     = 'single';
-let multiPages    = [];
-let activePageIdx = 0;
-let cropRatio     = null;
-let cropState     = {};
-let currentSaveMode = 'single';
-let idSides       = 'one';
-let idFrontImage  = null;
-let idBackImage   = null;
-let idCapturingFront = true;
-let idFilter      = 'original';
-let rotationAngle = 0;
-let isLoginMode   = false;
-let previewImg    = null;
+var currentScreen = 'landing';
+var capturedImage = null;
+var activeFilter  = 'original';
+var videoStream   = null;
+var freeUsed      = parseInt(localStorage.getItem('scanr_free') || '0');
+var savedScans    = JSON.parse(localStorage.getItem('scanr_scans') || '[]');
+var isLoggedIn    = localStorage.getItem('scanr_user') === 'true';
+var scanType      = 'document';
+var scanCount     = 'single';
+var multiPages    = [];
+var activePageIdx = 0;
+var cropRatio     = null;
+var cropState     = {};
+var currentSaveMode = 'single';
+var idSides       = 'one';
+var idFrontImage  = null;
+var idBackImage   = null;
+var idCapturingFront = true;
+var idFilter      = 'original';
+var rotationAngle = 0;
+var isLoginMode   = false;
+var previewImg    = null;
 
 updateNav();
 
+// ══ PROFILE PANEL ══════════════════════════════════════
+function openProfile() {
+  if (!isLoggedIn) { openModal('signin'); return; }
+  var uname = localStorage.getItem('scanr_username') || 'User';
+  var scans  = JSON.parse(localStorage.getItem('scanr_scans') || '[]');
+  document.getElementById('pp-avatar').textContent    = uname[0].toUpperCase();
+  document.getElementById('pp-name').textContent       = uname;
+  document.getElementById('pp-username-val').textContent = uname;
+  document.getElementById('new-username-input').value  = uname;
+  document.getElementById('pp-scan-count').textContent = scans.length;
+  document.getElementById('profile-panel').classList.add('open');
+  document.getElementById('profile-backdrop').classList.add('open');
+  document.getElementById('user-chip-el').classList.add('open');
+}
+function closeProfile() {
+  document.getElementById('profile-panel').classList.remove('open');
+  document.getElementById('profile-backdrop').classList.remove('open');
+  var chip = document.getElementById('user-chip-el');
+  if (chip) chip.classList.remove('open');
+}
+function toggleExpandUsername() {
+  document.getElementById('expand-username').classList.toggle('open');
+  document.getElementById('expand-password').classList.remove('open');
+}
+function toggleExpandPassword() {
+  document.getElementById('expand-password').classList.toggle('open');
+  document.getElementById('expand-username').classList.remove('open');
+}
+function saveUsername() {
+  var val = document.getElementById('new-username-input').value.trim();
+  if (!val) { showToast('⚠️ Username cannot be empty'); return; }
+  localStorage.setItem('scanr_username', val);
+  document.getElementById('pp-name').textContent = val;
+  document.getElementById('pp-username-val').textContent = val;
+  document.getElementById('expand-username').classList.remove('open');
+  updateNav();
+  showToast('✅ Username updated!');
+}
+function savePassword() {
+  var curr = document.getElementById('pw-current').value;
+  var nw   = document.getElementById('pw-new').value;
+  var conf = document.getElementById('pw-confirm').value;
+  if (!curr) { showToast('⚠️ Enter your current password'); return; }
+  if (nw.length < 6) { showToast('⚠️ Password must be at least 6 chars'); return; }
+  if (nw !== conf)   { showToast('⚠️ Passwords do not match'); return; }
+  document.getElementById('pw-current').value = '';
+  document.getElementById('pw-new').value     = '';
+  document.getElementById('pw-confirm').value = '';
+  document.getElementById('expand-password').classList.remove('open');
+  showToast('✅ Password updated!');
+}
+
 // ══ NAV ════════════════════════════════════════════════
 function updateNav() {
-  const nr = document.getElementById('nav-right');
+  var nr = document.getElementById('nav-right');
   if (isLoggedIn) {
-    const uname = localStorage.getItem('scanr_username') || 'U';
-    nr.innerHTML = `
-      <div class="user-chip"><div class="user-avatar">${uname[0].toUpperCase()}</div><span>${uname}</span></div>
-      <button class="btn-ghost" style="font-size:12px;color:#888" onclick="signOut()">Sign out</button>
-      <button class="btn-ghost" style="font-size:12px;color:var(--lime)" onclick="goTo('dashboard')">My Scans</button>`;
+    var uname = localStorage.getItem('scanr_username') || 'U';
+    nr.innerHTML =
+      '<div class="user-chip" id="user-chip-el" onclick="openProfile()" role="button" tabindex="0" aria-label="Open profile">' +
+        '<div class="user-avatar">' + uname[0].toUpperCase() + '</div>' +
+        '<span>' + uname + '</span>' +
+        '<span class="chip-caret">▾</span>' +
+      '</div>' +
+      '<button class="btn-ghost" style="font-size:12px;color:var(--lime)" onclick="goTo(\'dashboard\')">My Scans</button>';
+    // keyboard support
+    setTimeout(function() {
+      var chip = document.getElementById('user-chip-el');
+      if (chip) chip.addEventListener('keydown', function(e){ if(e.key==='Enter'||e.key===' ') openProfile(); });
+    }, 0);
   } else {
-    nr.innerHTML = `<span class="tag"><span class="dot"></span>Free</span>
-      <button class="btn-outline" style="padding:7px 16px;font-size:12px" onclick="openModal('signin')">Sign In</button>`;
+    nr.innerHTML =
+      '<span class="tag"><span class="dot"></span>Free</span>' +
+      '<button class="btn-outline" style="padding:7px 16px;font-size:12px" onclick="openModal(\'signin\')">Sign In</button>';
   }
 }
 
 function signOut() {
-  localStorage.removeItem('scanr_user'); localStorage.removeItem('scanr_username');
-  isLoggedIn = false; updateNav(); goTo('landing');
+  localStorage.removeItem('scanr_user');
+  localStorage.removeItem('scanr_username');
+  isLoggedIn = false;
+  closeProfile();
+  updateNav();
+  goTo('landing');
 }
 
 // ══ NAVIGATION ═════════════════════════════════════════
 function goTo(screen) {
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.screen').forEach(function(s){ s.classList.remove('active'); });
   document.getElementById('screen-' + screen).classList.add('active');
   currentScreen = screen;
-  if (screen !== 'scan') stopCamera();
+  // Only stop camera when leaving the scan/crop flow entirely
+  if (screen !== 'scan' && screen !== 'crop') stopCamera();
   if (screen === 'dashboard') renderDashboard();
   window.scrollTo(0, 0);
 }
@@ -731,11 +820,11 @@ function goTo(screen) {
 // ══ SCAN TYPE / SIDES ══════════════════════════════════
 function setScanType(type, el) {
   scanType = type;
-  document.querySelectorAll('.scan-type-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.scan-type-btn').forEach(function(b){ b.classList.remove('active'); });
   el.classList.add('active');
-  const sidesRow = document.getElementById('sides-row');
-  const pagesRow = document.getElementById('pages-row');
-  const camOuter = document.getElementById('cam-outer');
+  var sidesRow = document.getElementById('sides-row');
+  var pagesRow = document.getElementById('pages-row');
+  var camOuter = document.getElementById('cam-outer');
   camOuter.className = 'cam-outer';
   if (type === 'id') {
     sidesRow.style.display = 'block'; pagesRow.style.display = 'none';
@@ -748,18 +837,16 @@ function setScanType(type, el) {
     sidesRow.style.display = 'none'; pagesRow.style.display = 'block';
   }
 }
-
 function setSides(val, el) {
   idSides = val;
-  document.querySelectorAll('.sides-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.sides-btn').forEach(function(b){ b.classList.remove('active'); });
   el.classList.add('active');
   document.getElementById('two-side-strip').style.display = val === 'two' ? 'flex' : 'none';
   document.getElementById('id-divider').style.display = (val === 'two' && videoStream) ? 'block' : 'none';
 }
-
 function selectCount(count, el) {
   scanCount = count;
-  document.querySelectorAll('#pages-row .sides-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('#pages-row .sides-btn').forEach(function(b){ b.classList.remove('active'); });
   el.classList.add('active');
 }
 
@@ -769,65 +856,83 @@ async function startCamera() {
     videoStream = await navigator.mediaDevices.getUserMedia({
       video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 } }, audio: false
     });
-    const video = document.getElementById('video');
+    var video = document.getElementById('video');
     video.srcObject = videoStream;
     video.style.display = 'block';
     document.getElementById('cam-idle').style.display = 'none';
     document.getElementById('cam-scan-line').style.display = 'block';
-    ['c-tl','c-tr','c-bl','c-br'].forEach(c => document.getElementById(c).style.display = 'block');
+    ['c-tl','c-tr','c-bl','c-br'].forEach(function(c){ document.getElementById(c).style.display = 'block'; });
     document.getElementById('cam-btn-row').style.display = 'block';
     if (scanType === 'id' && idSides === 'two') {
       document.getElementById('id-divider').style.display = 'block';
       showSideIndicator(idCapturingFront ? 'Front Side' : 'Back Side');
     }
-  } catch {
+  } catch(e) {
     document.getElementById('cam-idle').innerHTML = '<div style="font-size:26px;margin-bottom:8px">⚠️</div><p>Camera access denied.<br/>Use Upload instead.</p>';
   }
 }
 
+// KEY FIX: stopCamera fully resets UI so camera can be reopened cleanly
 function stopCamera() {
-  if (videoStream) { videoStream.getTracks().forEach(t => t.stop()); videoStream = null; }
+  if (videoStream) {
+    videoStream.getTracks().forEach(function(t){ t.stop(); });
+    videoStream = null;
+  }
+  var video = document.getElementById('video');
+  if (video) { video.srcObject = null; video.style.display = 'none'; }
+  var idle = document.getElementById('cam-idle');
+  if (idle) {
+    idle.style.display = 'block';
+    idle.innerHTML = '<div style="font-size:36px;margin-bottom:10px">📷</div><p>Allow camera access to start scanning</p><button class="btn-lime" onclick="startCamera()">Open Camera</button>';
+  }
+  ['cam-scan-line','c-tl','c-tr','c-bl','c-br','side-indicator','id-divider'].forEach(function(id){
+    var el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+  var btnRow = document.getElementById('cam-btn-row');
+  if (btnRow) btnRow.style.display = 'none';
 }
 
 function showSideIndicator(text) {
-  const si = document.getElementById('side-indicator');
+  var si = document.getElementById('side-indicator');
   si.textContent = text; si.style.display = 'block';
 }
 
 function capturePhoto() {
-  const video = document.getElementById('video');
-  const canvas = document.createElement('canvas');
-  canvas.width = video.videoWidth || 640;
+  var video = document.getElementById('video');
+  var canvas = document.createElement('canvas');
+  canvas.width  = video.videoWidth  || 640;
   canvas.height = video.videoHeight || 480;
   canvas.getContext('2d').drawImage(video, 0, 0);
-  const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
-  showScanAnimation(() => {
+  var dataUrl = canvas.toDataURL('image/jpeg', 0.95);
+  showScanAnimation(function() {
     if (scanType === 'id' && idSides === 'two') {
       handleIdTwoSideCapture(dataUrl);
+      // camera stays alive — need second side
     } else {
       capturedImage = dataUrl;
-      stopCamera();
+      // KEY FIX: do NOT stop camera here — stop only when leaving scan flow
       goToCrop();
     }
   });
 }
 
 function showScanAnimation(cb) {
-  const wrap = document.getElementById('scan-progress-wrap');
-  const bar = document.getElementById('scan-progress-bar');
-  const status = document.getElementById('scan-status');
+  var wrap   = document.getElementById('scan-progress-wrap');
+  var bar    = document.getElementById('scan-progress-bar');
+  var status = document.getElementById('scan-status');
   wrap.style.display = 'block'; status.style.display = 'block';
-  const steps = ['Capturing...', 'Processing image...', 'Enhancing edges...', 'Saving...'];
-  let step = 0; let pct = 0;
+  var steps = ['Capturing...','Processing image...','Enhancing edges...','Saving...'];
+  var step = 0, pct = 0;
   status.textContent = steps[0];
-  const interval = setInterval(() => {
+  var interval = setInterval(function() {
     pct += 26;
     bar.style.width = Math.min(pct, 100) + '%';
     step++;
     if (steps[step]) status.textContent = steps[step];
     if (pct >= 100) {
       clearInterval(interval);
-      setTimeout(() => {
+      setTimeout(function() {
         wrap.style.display = 'none'; status.style.display = 'none';
         bar.style.width = '0%';
         cb();
@@ -839,22 +944,20 @@ function showScanAnimation(cb) {
 function handleIdTwoSideCapture(dataUrl) {
   if (idCapturingFront) {
     idFrontImage = dataUrl;
-    // show front in strip
-    const fc = document.getElementById('side-front-card');
-    fc.innerHTML = `<img src="${dataUrl}" style="width:100%;height:100%;object-fit:cover"><div class="side-badge">FRONT ✓</div>`;
+    var fc = document.getElementById('side-front-card');
+    fc.innerHTML = '<img src="'+dataUrl+'" style="width:100%;height:100%;object-fit:cover"><div class="side-badge">FRONT ✓</div>';
     fc.classList.remove('active-side'); fc.classList.add('filled');
-    const bc = document.getElementById('side-back-card');
-    bc.classList.add('active-side');
+    document.getElementById('side-back-card').classList.add('active-side');
     idCapturingFront = false;
     showSideIndicator('Back Side');
     showToast('Front captured! Now capture the back side.');
   } else {
     idBackImage = dataUrl;
-    const bc = document.getElementById('side-back-card');
-    bc.innerHTML = `<img src="${dataUrl}" style="width:100%;height:100%;object-fit:cover"><div class="side-badge">BACK ✓</div>`;
+    var bc = document.getElementById('side-back-card');
+    bc.innerHTML = '<img src="'+dataUrl+'" style="width:100%;height:100%;object-fit:cover"><div class="side-badge">BACK ✓</div>';
     bc.classList.remove('active-side'); bc.classList.add('filled');
     idCapturingFront = true;
-    stopCamera();
+    stopCamera(); // both sides done — safe to stop
     showIdCardPreview();
   }
 }
@@ -873,28 +976,26 @@ function showIdCardPreview() {
 
 // ══ UPLOAD ═════════════════════════════════════════════
 function handleFile(e) {
-  const file = e.target.files[0]; if (!file) return;
-  const reader = new FileReader();
-  reader.onload = ev => { capturedImage = ev.target.result; goToCrop(); };
+  var file = e.target.files[0]; if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(ev) { capturedImage = ev.target.result; goToCrop(); };
   reader.readAsDataURL(file);
 }
-
-const dropZone = document.getElementById('drop-zone');
-dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
-dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
-dropZone.addEventListener('drop', e => {
+var dropZone = document.getElementById('drop-zone');
+dropZone.addEventListener('dragover', function(e){ e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', function(){ dropZone.classList.remove('drag-over'); });
+dropZone.addEventListener('drop', function(e){
   e.preventDefault(); dropZone.classList.remove('drag-over');
-  const file = e.dataTransfer.files[0];
+  var file = e.dataTransfer.files[0];
   if (file && file.type.startsWith('image/')) {
-    const reader = new FileReader();
-    reader.onload = ev => { capturedImage = ev.target.result; goToCrop(); };
+    var reader = new FileReader();
+    reader.onload = function(ev){ capturedImage = ev.target.result; goToCrop(); };
     reader.readAsDataURL(file);
   }
 });
-
 function switchTab(tab) {
   document.getElementById('camera-panel').style.display = tab === 'camera' ? 'block' : 'none';
-  document.getElementById('upload-panel').style.display = tab === 'upload' ? 'block' : 'none';
+  document.getElementById('upload-panel').style.display  = tab === 'upload'  ? 'block' : 'none';
   document.getElementById('tab-cam').classList.toggle('active', tab === 'camera');
   document.getElementById('tab-upl').classList.toggle('active', tab === 'upload');
   if (tab !== 'camera') stopCamera();
@@ -903,42 +1004,36 @@ function switchTab(tab) {
 // ══ CROP ═══════════════════════════════════════════════
 function goToCrop() {
   goTo('crop');
-  const img = document.getElementById('crop-img');
+  var img = document.getElementById('crop-img');
   img.onload = initCropUI;
   img.src = capturedImage;
-  document.querySelectorAll('.crop-ratio-btn').forEach((b,i) => b.classList.toggle('active', i===0));
+  document.querySelectorAll('.crop-ratio-btn').forEach(function(b,i){ b.classList.toggle('active', i===0); });
   cropRatio = null;
-  // Auto-set ratio based on scan type
-  if (scanType === 'id') { setTimeout(() => { setCropRatio(85.6/54, document.querySelectorAll('.crop-ratio-btn')[2]); }, 200); }
-  else if (scanType === 'passport') { setTimeout(() => { setCropRatio(0.707, document.querySelectorAll('.crop-ratio-btn')[3]); }, 200); }
+  if (scanType === 'id') { setTimeout(function(){ setCropRatio(85.6/54, document.querySelectorAll('.crop-ratio-btn')[2]); }, 200); }
+  else if (scanType === 'passport') { setTimeout(function(){ setCropRatio(0.707, document.querySelectorAll('.crop-ratio-btn')[3]); }, 200); }
 }
-
 function goToCropFromPreview() { goTo('crop'); }
 function goToCropIdCard(side) { capturedImage = side === 'front' ? idFrontImage : idBackImage; goToCrop(); }
 
 function initCropUI() {
-  const img = document.getElementById('crop-img');
-  const w = img.offsetWidth, h = img.offsetHeight;
-  const pad = 0.05;
+  var img = document.getElementById('crop-img');
+  var w = img.offsetWidth, h = img.offsetHeight, pad = 0.05;
   cropState = { x: w*pad, y: h*pad, w: w*(1-pad*2), h: h*(1-pad*2) };
-  renderCropSelection();
-  setupCropDrag();
+  renderCropSelection(); setupCropDrag();
 }
-
 function renderCropSelection() {
-  const sel = document.getElementById('crop-selection');
-  sel.style.left = cropState.x+'px'; sel.style.top = cropState.y+'px';
-  sel.style.width = cropState.w+'px'; sel.style.height = cropState.h+'px';
+  var sel = document.getElementById('crop-selection');
+  sel.style.left = cropState.x+'px'; sel.style.top  = cropState.y+'px';
+  sel.style.width= cropState.w+'px'; sel.style.height= cropState.h+'px';
 }
-
 function setCropRatio(ratio, btn) {
   cropRatio = ratio;
-  document.querySelectorAll('.crop-ratio-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.crop-ratio-btn').forEach(function(b){ b.classList.remove('active'); });
   btn.classList.add('active');
   if (ratio) {
-    const img = document.getElementById('crop-img');
-    const W = img.offsetWidth, H = img.offsetHeight;
-    let w = cropState.w, h = w / ratio;
+    var img = document.getElementById('crop-img');
+    var W = img.offsetWidth, H = img.offsetHeight;
+    var w = cropState.w, h = w / ratio;
     if (h > H*0.9) { h = H*0.9; w = h*ratio; }
     if (w > W*0.9) { w = W*0.9; h = w/ratio; }
     cropState.w = w; cropState.h = h;
@@ -946,36 +1041,34 @@ function setCropRatio(ratio, btn) {
     renderCropSelection();
   }
 }
-
 function setupCropDrag() {
-  const container = document.getElementById('crop-container');
-  const sel = document.getElementById('crop-selection');
-  let dragging = false, handle = null, startX, startY, startState;
+  var container = document.getElementById('crop-container');
+  var sel = document.getElementById('crop-selection');
+  var dragging = false, handle = null, startX, startY, startState;
   function getPoint(e) { return e.touches ? e.touches[0] : e; }
   function onStart(e) {
     e.preventDefault();
-    const pt = getPoint(e); startX = pt.clientX; startY = pt.clientY; startState = {...cropState};
-    const h = e.target.dataset.handle;
+    var pt = getPoint(e); startX = pt.clientX; startY = pt.clientY; startState = Object.assign({},cropState);
+    var h = e.target.dataset.handle;
     if (h) { handle = h; dragging = true; }
     else if (e.target === sel || sel.contains(e.target)) { handle = 'move'; dragging = true; }
     else {
-      const rect = container.getBoundingClientRect();
+      var rect = container.getBoundingClientRect();
       handle = 'draw'; dragging = true;
       startState = { x: startX-rect.left, y: startY-rect.top, w: 0, h: 0 };
-      cropState = {...startState};
+      cropState = Object.assign({},startState);
     }
   }
   function onMove(e) {
     if (!dragging) return; e.preventDefault();
-    const pt = getPoint(e); const dx = pt.clientX-startX, dy = pt.clientY-startY;
-    const img = document.getElementById('crop-img');
-    const W = img.offsetWidth, H = img.offsetHeight;
-    let {x,y,w,h} = startState;
+    var pt = getPoint(e), dx = pt.clientX-startX, dy = pt.clientY-startY;
+    var img = document.getElementById('crop-img'), W = img.offsetWidth, H = img.offsetHeight;
+    var x=startState.x, y=startState.y, w=startState.w, h=startState.h;
     if (handle === 'move') {
       x = Math.max(0,Math.min(W-w, x+dx)); y = Math.max(0,Math.min(H-h, y+dy));
     } else if (handle === 'draw') {
-      const rect = container.getBoundingClientRect();
-      const cx = pt.clientX-rect.left, cy = pt.clientY-rect.top;
+      var rect = container.getBoundingClientRect();
+      var cx = pt.clientX-rect.left, cy = pt.clientY-rect.top;
       x = Math.min(startState.x,cx); y = Math.min(startState.y,cy);
       w = Math.abs(cx-startState.x); h = Math.abs(cy-startState.y);
     } else {
@@ -986,7 +1079,7 @@ function setupCropDrag() {
       if (cropRatio) h = w/cropRatio;
       x = Math.max(0,Math.min(W-w,x)); y = Math.max(0,Math.min(H-h,y));
     }
-    cropState = {x,y,w,h}; renderCropSelection();
+    cropState = {x:x,y:y,w:w,h:h}; renderCropSelection();
   }
   function onEnd() { dragging=false; handle=null; }
   container.addEventListener('mousedown',onStart);
@@ -996,17 +1089,15 @@ function setupCropDrag() {
   container.addEventListener('touchmove',onMove,{passive:false});
   container.addEventListener('touchend',onEnd);
 }
-
 function applyCrop() {
-  const img = document.getElementById('crop-img');
-  const scale = img.naturalWidth / img.offsetWidth;
-  const canvas = document.getElementById('crop-canvas');
+  var img = document.getElementById('crop-img');
+  var scale = img.naturalWidth / img.offsetWidth;
+  var canvas = document.getElementById('crop-canvas');
   canvas.width = cropState.w*scale; canvas.height = cropState.h*scale;
   canvas.getContext('2d').drawImage(img, cropState.x*scale, cropState.y*scale, cropState.w*scale, cropState.h*scale, 0, 0, canvas.width, canvas.height);
   capturedImage = canvas.toDataURL('image/jpeg', 0.95);
   goToPreview();
 }
-
 function skipCrop() { goToPreview(); }
 
 // ══ PREVIEW ════════════════════════════════════════════
@@ -1015,157 +1106,137 @@ function goToPreview() {
   if (scanCount === 'multi') {
     multiPages.push({ dataUrl: capturedImage, filter: 'original' });
     activePageIdx = multiPages.length - 1;
-    goTo('multi');
-    renderMultiStrip();
-    renderMultiCanvas();
+    goTo('multi'); renderMultiStrip(); renderMultiCanvas();
   } else {
-    goTo('preview');
-    renderPreview();
+    goTo('preview'); renderPreview();
   }
 }
-
 function renderPreview() {
-  const canvas = document.getElementById('output-canvas');
-  const img = new Image();
-  img.onload = () => {
-    previewImg = img;
-    canvas.width = img.width; canvas.height = img.height;
+  var canvas = document.getElementById('output-canvas');
+  var img = new Image();
+  img.onload = function() {
+    previewImg = img; canvas.width = img.width; canvas.height = img.height;
     applyFilterToCanvas(canvas.getContext('2d'), img, activeFilter);
   };
   img.src = capturedImage;
-  document.querySelectorAll('#screen-preview .filter-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('#screen-preview .filter-btn').forEach(function(b){ b.classList.remove('active'); });
   document.querySelector('#screen-preview .filter-btn').classList.add('active');
   activeFilter = 'original';
   document.getElementById('preview-hint').style.display = isLoggedIn ? 'none' : 'block';
 }
-
 function applyFilter(type, btn) {
   activeFilter = type;
-  document.querySelectorAll('#screen-preview .filter-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('#screen-preview .filter-btn').forEach(function(b){ b.classList.remove('active'); });
   btn.classList.add('active');
-  const canvas = document.getElementById('output-canvas');
+  var canvas = document.getElementById('output-canvas');
   if (previewImg) applyFilterToCanvas(canvas.getContext('2d'), previewImg, type);
 }
-
 function toggleFilters() {
-  const p = document.getElementById('filter-panel');
+  var p = document.getElementById('filter-panel');
   p.style.display = p.style.display === 'none' ? 'block' : 'none';
 }
-
 function rotateImage() {
   rotationAngle = (rotationAngle + 90) % 360;
-  const canvas = document.getElementById('output-canvas');
-  const tmpCanvas = document.createElement('canvas');
-  const ctx = canvas.getContext('2d');
-  const img = previewImg;
-  if (!img) return;
-  const rad = (rotationAngle % 180 !== 0);
-  tmpCanvas.width = rad ? img.height : img.width;
-  tmpCanvas.height = rad ? img.width : img.height;
-  const tctx = tmpCanvas.getContext('2d');
-  tctx.translate(tmpCanvas.width/2, tmpCanvas.height/2);
+  var canvas = document.getElementById('output-canvas');
+  var img = previewImg; if (!img) return;
+  var rad = (rotationAngle % 180 !== 0);
+  var tmp = document.createElement('canvas');
+  tmp.width  = rad ? img.height : img.width;
+  tmp.height = rad ? img.width  : img.height;
+  var tctx = tmp.getContext('2d');
+  tctx.translate(tmp.width/2, tmp.height/2);
   tctx.rotate(rotationAngle * Math.PI / 180);
   tctx.drawImage(img, -img.width/2, -img.height/2);
-  canvas.width = tmpCanvas.width; canvas.height = tmpCanvas.height;
-  ctx.drawImage(tmpCanvas, 0, 0);
+  canvas.width = tmp.width; canvas.height = tmp.height;
+  canvas.getContext('2d').drawImage(tmp, 0, 0);
   capturedImage = canvas.toDataURL('image/jpeg', 0.95);
-  const newImg = new Image(); newImg.onload = () => { previewImg = newImg; }; newImg.src = capturedImage;
+  var ni = new Image(); ni.onload = function(){ previewImg = ni; }; ni.src = capturedImage;
 }
-
 function deletePreview() { if (confirm('Delete this scan?')) retake(); }
-
 function addPageFromPreview() {
   multiPages.push({ dataUrl: capturedImage, filter: activeFilter });
-  scanCount = 'multi';
-  goTo('scan');
+  scanCount = 'multi'; goTo('scan');
 }
 
 // ══ MULTI ══════════════════════════════════════════════
 function renderMultiStrip() {
-  const strip = document.getElementById('multi-strip');
-  const addBtn = strip.querySelector('.strip-add');
-  strip.querySelectorAll('.strip-item').forEach(el => el.remove());
-  multiPages.forEach((page, i) => {
-    const div = document.createElement('div');
+  var strip = document.getElementById('multi-strip');
+  var addBtn = strip.querySelector('.strip-add');
+  strip.querySelectorAll('.strip-item').forEach(function(el){ el.remove(); });
+  multiPages.forEach(function(page, i) {
+    var div = document.createElement('div');
     div.className = 'strip-item';
     div.style.borderColor = i === activePageIdx ? 'var(--lime)' : '';
-    div.innerHTML = `<img src="${page.dataUrl}"/><div class="strip-num">${i+1}</div>`;
-    div.onclick = () => { activePageIdx = i; renderMultiStrip(); renderMultiCanvas(); };
+    div.innerHTML = '<img src="'+page.dataUrl+'"/><div class="strip-num">'+(i+1)+'</div>';
+    div.onclick = function(){ activePageIdx = i; renderMultiStrip(); renderMultiCanvas(); };
     strip.insertBefore(div, addBtn);
   });
-  document.getElementById('multi-count').textContent = multiPages.length;
+  document.getElementById('multi-count').textContent    = multiPages.length;
   document.getElementById('active-page-num').textContent = activePageIdx + 1;
 }
-
 function renderMultiCanvas() {
-  const page = multiPages[activePageIdx];
-  const canvas = document.getElementById('multi-canvas');
-  const img = new Image();
-  img.onload = () => { canvas.width=img.width; canvas.height=img.height; applyFilterToCanvas(canvas.getContext('2d'),img,page.filter); };
+  var page = multiPages[activePageIdx];
+  var canvas = document.getElementById('multi-canvas');
+  var img = new Image();
+  img.onload = function(){ canvas.width=img.width; canvas.height=img.height; applyFilterToCanvas(canvas.getContext('2d'),img,page.filter); };
   img.src = page.dataUrl;
-  document.querySelectorAll('#screen-multi .filter-btn').forEach(b=>b.classList.remove('active'));
-  const map={original:0,bw:1,enhance:2,document:3,vivid:4};
-  const el=document.querySelectorAll('#screen-multi .filter-btn')[map[page.filter]||0];
+  document.querySelectorAll('#screen-multi .filter-btn').forEach(function(b){ b.classList.remove('active'); });
+  var map={original:0,bw:1,enhance:2,document:3,vivid:4};
+  var el=document.querySelectorAll('#screen-multi .filter-btn')[map[page.filter]||0];
   if(el) el.classList.add('active');
 }
-
 function applyMultiFilter(type, btn) {
   multiPages[activePageIdx].filter = type;
-  document.querySelectorAll('#screen-multi .filter-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('#screen-multi .filter-btn').forEach(function(b){ b.classList.remove('active'); });
   btn.classList.add('active');
-  const canvas = document.getElementById('multi-canvas');
-  const img = new Image();
-  img.onload=()=>{canvas.width=img.width;canvas.height=img.height;applyFilterToCanvas(canvas.getContext('2d'),img,type);};
+  var canvas = document.getElementById('multi-canvas');
+  var img = new Image();
+  img.onload=function(){canvas.width=img.width;canvas.height=img.height;applyFilterToCanvas(canvas.getContext('2d'),img,type);};
   img.src = multiPages[activePageIdx].dataUrl;
 }
-
 function toggleMultiFilters() {
-  const p=document.getElementById('multi-filter-panel');
+  var p=document.getElementById('multi-filter-panel');
   p.style.display=p.style.display==='none'?'block':'none';
 }
-
 function rotateMultiPage() {
-  const page = multiPages[activePageIdx];
-  const img = new Image();
-  img.onload = () => {
-    const tmp = document.createElement('canvas');
+  var page = multiPages[activePageIdx];
+  var img = new Image();
+  img.onload = function() {
+    var tmp = document.createElement('canvas');
     tmp.width = img.height; tmp.height = img.width;
-    const ctx = tmp.getContext('2d');
-    ctx.translate(tmp.width/2,tmp.height/2);
-    ctx.rotate(Math.PI/2);
+    var ctx = tmp.getContext('2d');
+    ctx.translate(tmp.width/2,tmp.height/2); ctx.rotate(Math.PI/2);
     ctx.drawImage(img,-img.width/2,-img.height/2);
-    page.dataUrl = tmp.toDataURL('image/jpeg',0.95);
-    renderMultiCanvas();
+    page.dataUrl = tmp.toDataURL('image/jpeg',0.95); renderMultiCanvas();
   };
   img.src = page.dataUrl;
 }
-
 function deleteMultiPage() {
   if (multiPages.length <= 1) { retake(); return; }
   multiPages.splice(activePageIdx,1);
   activePageIdx = Math.max(0,activePageIdx-1);
   renderMultiStrip(); renderMultiCanvas();
 }
-
 function addAnotherPage() { goTo('scan'); scanCount='multi'; }
 
-// ══ ID CARD FILTER ════════════════════════════════════
+// ══ ID CARD FILTER ═════════════════════════════════════
 function toggleIdFilters() {
-  const p=document.getElementById('id-filter-panel');
+  var p=document.getElementById('id-filter-panel');
   p.style.display=p.style.display==='none'?'block':'none';
 }
-
 function applyIdFilter(type, btn) {
   idFilter = type;
-  document.querySelectorAll('#id-filter-panel .filter-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('#id-filter-panel .filter-btn').forEach(function(b){ b.classList.remove('active'); });
   btn.classList.add('active');
-  // Apply to front
-  if (idFrontImage) applyFilterToDataUrl(idFrontImage, type, r => { document.getElementById('id-front-img').src=r; idFrontImage=r; });
-  if (idBackImage) applyFilterToDataUrl(idBackImage, type, r => { document.getElementById('id-back-img').src=r; idBackImage=r; });
+  if (idFrontImage) applyFilterToDataUrl(idFrontImage, type, function(r){ document.getElementById('id-front-img').src=r; idFrontImage=r; });
+  if (idBackImage)  applyFilterToDataUrl(idBackImage,  type, function(r){ document.getElementById('id-back-img').src=r;  idBackImage=r; });
 }
-
 function applyFilterToDataUrl(dataUrl, filter, cb) {
-  const img=new Image(); img.onload=()=>{const c=document.createElement('canvas');c.width=img.width;c.height=img.height;applyFilterToCanvas(c.getContext('2d'),img,filter);cb(c.toDataURL('image/jpeg',0.95));};
+  var img=new Image();
+  img.onload=function(){
+    var c=document.createElement('canvas'); c.width=img.width; c.height=img.height;
+    applyFilterToCanvas(c.getContext('2d'),img,filter); cb(c.toDataURL('image/jpeg',0.95));
+  };
   img.src=dataUrl;
 }
 
@@ -1174,192 +1245,195 @@ function applyFilterToCanvas(ctx, img, f) {
   ctx.clearRect(0,0,ctx.canvas.width,ctx.canvas.height);
   ctx.drawImage(img,0,0);
   if (f==='original') return;
-  const d=ctx.getImageData(0,0,ctx.canvas.width,ctx.canvas.height), px=d.data;
-  for(let i=0;i<px.length;i+=4){
-    const r=px[i],g=px[i+1],b=px[i+2];
+  var d=ctx.getImageData(0,0,ctx.canvas.width,ctx.canvas.height), px=d.data;
+  for(var i=0;i<px.length;i+=4){
+    var r=px[i],g=px[i+1],b=px[i+2];
     if(f==='bw'){px[i]=px[i+1]=px[i+2]=0.299*r+0.587*g+0.114*b;}
-    else if(f==='enhance'){const gr=0.299*r+0.587*g+0.114*b;px[i]=px[i+1]=px[i+2]=gr<128?Math.max(0,gr*0.65):Math.min(255,gr*1.35+15);}
-    else if(f==='document'){const gr=0.299*r+0.587*g+0.114*b;px[i]=px[i+1]=px[i+2]=gr>145?255:Math.max(0,gr*0.4);}
-    else if(f==='vivid'){const av=(r+g+b)/3;px[i]=Math.min(255,r+(r-av)*0.5);px[i+1]=Math.min(255,g+(g-av)*0.5);px[i+2]=Math.min(255,b+(b-av)*0.5);}
+    else if(f==='enhance'){var gr=0.299*r+0.587*g+0.114*b;px[i]=px[i+1]=px[i+2]=gr<128?Math.max(0,gr*0.65):Math.min(255,gr*1.35+15);}
+    else if(f==='document'){var gr2=0.299*r+0.587*g+0.114*b;px[i]=px[i+1]=px[i+2]=gr2>145?255:Math.max(0,gr2*0.4);}
+    else if(f==='vivid'){var av=(r+g+b)/3;px[i]=Math.min(255,r+(r-av)*0.5);px[i+1]=Math.min(255,g+(g-av)*0.5);px[i+2]=Math.min(255,b+(b-av)*0.5);}
   }
   ctx.putImageData(d,0,0);
 }
 
 // ══ SAVE MODAL ═════════════════════════════════════════
-function openSaveModal(mode) {
-  currentSaveMode = mode;
-  document.getElementById('save-modal').classList.add('open');
-}
-function closeSaveModal() { document.getElementById('save-modal').classList.remove('open'); }
+function openSaveModal(mode) { currentSaveMode=mode; document.getElementById('save-modal').classList.add('open'); }
+function closeSaveModal()     { document.getElementById('save-modal').classList.remove('open'); }
 
 function doSave(format) {
   closeSaveModal();
   if (!isLoggedIn && freeUsed >= 1) { openModal('unlock'); return; }
-
-  if (format === 'pdf') {
-    savePDF();
-  } else if (format === 'jpg') {
-    saveJPG();
-  } else if (format === 'png') {
-    savePNG();
-  } else if (format === 'docx') {
-    saveDocx();
-  }
-
+  if (format==='pdf')  savePDF();
+  else if (format==='jpg')  saveJPG();
+  else if (format==='png')  savePNG();
+  else if (format==='docx') saveDocx();
   if (!isLoggedIn) { freeUsed++; localStorage.setItem('scanr_free',freeUsed); }
   persistToHistory();
-  showToast('✅ Saved as ' + format.toUpperCase() + '!');
+  showToast('✅ Saved as '+format.toUpperCase()+'!');
 }
-
 function getActiveCanvas() {
-  if (currentSaveMode === 'single') return document.getElementById('output-canvas');
-  if (currentSaveMode === 'multi') return buildMultiCanvas();
-  if (currentSaveMode === 'idcard') return buildIdCardCanvas();
+  if (currentSaveMode==='single') return document.getElementById('output-canvas');
+  if (currentSaveMode==='multi')  return buildMultiCanvas();
+  if (currentSaveMode==='idcard') return buildIdCardCanvas();
   return document.getElementById('output-canvas');
 }
-
 function buildMultiCanvas() {
-  const canvases = multiPages.map(page => {
-    const img = new Image(); img.src = page.dataUrl;
-    const c = document.createElement('canvas');
-    c.width = img.width || 800; c.height = img.height || 1000;
-    applyFilterToCanvas(c.getContext('2d'), img, page.filter);
-    return c;
-  });
-  const A4W = 2480, A4H = 3508;
-  const final = document.createElement('canvas'); final.width=A4W; final.height=A4H;
-  const ctx = final.getContext('2d'); ctx.fillStyle='#ffffff'; ctx.fillRect(0,0,A4W,A4H);
-  let y=80;
-  canvases.forEach(c => {
-    const scale = (A4W-160)/c.width;
+  var A4W=2480, A4H=3508;
+  var final=document.createElement('canvas'); final.width=A4W; final.height=A4H;
+  var ctx=final.getContext('2d'); ctx.fillStyle='#ffffff'; ctx.fillRect(0,0,A4W,A4H);
+  var y=80;
+  multiPages.forEach(function(page){
+    var img=new Image(); img.src=page.dataUrl;
+    var c=document.createElement('canvas'); c.width=img.width||800; c.height=img.height||1000;
+    applyFilterToCanvas(c.getContext('2d'),img,page.filter);
+    var scale=(A4W-160)/c.width;
     ctx.drawImage(c,80,y,c.width*scale,c.height*scale);
-    y += c.height*scale + 40;
+    y+=c.height*scale+40;
   });
   return final;
 }
-
 function buildIdCardCanvas() {
-  const A4W=2480, A4H=3508;
-  const final=document.createElement('canvas'); final.width=A4W; final.height=A4H;
-  const ctx=final.getContext('2d'); ctx.fillStyle='#ffffff'; ctx.fillRect(0,0,A4W,A4H);
-  const cardW=1400, cardH=Math.round(1400*54/85.6);
-  const xOff=(A4W-cardW)/2;
-  if(idFrontImage){const fi=new Image();fi.src=idFrontImage;ctx.drawImage(fi,xOff,200,cardW,cardH);}
-  if(idBackImage){const bi=new Image();bi.src=idBackImage;ctx.drawImage(bi,xOff,200+cardH+80,cardW,cardH);}
+  var A4W=2480,A4H=3508;
+  var final=document.createElement('canvas'); final.width=A4W; final.height=A4H;
+  var ctx=final.getContext('2d'); ctx.fillStyle='#ffffff'; ctx.fillRect(0,0,A4W,A4H);
+  var cardW=1400, cardH=Math.round(1400*54/85.6), xOff=(A4W-cardW)/2;
+  if(idFrontImage){var fi=new Image();fi.src=idFrontImage;ctx.drawImage(fi,xOff,200,cardW,cardH);}
+  if(idBackImage) {var bi=new Image();bi.src=idBackImage; ctx.drawImage(bi,xOff,200+cardH+80,cardW,cardH);}
   return final;
 }
-
 function saveJPG() {
-  const canvas=getActiveCanvas(); if(!canvas)return;
-  const a=document.createElement('a'); a.download='scanr-'+Date.now()+'.jpg';
-  a.href=canvas.toDataURL('image/jpeg',0.92); a.click();
+  var c=getActiveCanvas(); if(!c)return;
+  var a=document.createElement('a'); a.download='scanr-'+Date.now()+'.jpg';
+  a.href=c.toDataURL('image/jpeg',0.92); a.click();
 }
-
 function savePNG() {
-  const canvas=getActiveCanvas(); if(!canvas)return;
-  const a=document.createElement('a'); a.download='scanr-'+Date.now()+'.png';
-  a.href=canvas.toDataURL('image/png'); a.click();
+  var c=getActiveCanvas(); if(!c)return;
+  var a=document.createElement('a'); a.download='scanr-'+Date.now()+'.png';
+  a.href=c.toDataURL('image/png'); a.click();
 }
-
 function savePDF() {
-  const canvas=getActiveCanvas(); if(!canvas)return;
-  // Simple HTML→PDF using data URL in new tab (actual jsPDF would need CDN)
-  const imgData=canvas.toDataURL('image/jpeg',0.92);
-  const win=window.open('');
-  win.document.write(`<html><head><style>body{margin:0;background:#fff}img{max-width:100%;display:block}</style></head><body><img src="${imgData}"/><script>window.onload=()=>window.print()<\/script></body></html>`);
+  var c=getActiveCanvas(); if(!c)return;
+  var imgData=c.toDataURL('image/jpeg',0.92);
+  var win=window.open('');
+  win.document.write('<html><head><style>body{margin:0;background:#fff}img{max-width:100%;display:block}</style></head><body><img src="'+imgData+'"/><scr'+'ipt>window.onload=function(){window.print()}<\/scr'+'ipt></body></html>');
 }
-
 function saveDocx() {
-  // Creates an HTML-based docx-like file
-  const canvas=getActiveCanvas(); if(!canvas)return;
-  const imgData=canvas.toDataURL('image/jpeg',0.85);
-  const html=`<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'><title>SCANR Document</title></head><body><div style="text-align:center"><img src="${imgData}" style="max-width:100%"/></div></body></html>`;
-  const blob=new Blob(['\ufeff',html],{type:'application/msword'});
-  const a=document.createElement('a'); a.download='scanr-'+Date.now()+'.doc';
+  var c=getActiveCanvas(); if(!c)return;
+  var imgData=c.toDataURL('image/jpeg',0.85);
+  var html="<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'><title>SCANR Document</title></head><body><div style='text-align:center'><img src='"+imgData+"' style='max-width:100%'/></div></body></html>";
+  var blob=new Blob(['\ufeff',html],{type:'application/msword'});
+  var a=document.createElement('a'); a.download='scanr-'+Date.now()+'.doc';
   a.href=URL.createObjectURL(blob); a.click();
 }
-
 function persistToHistory() {
-  let thumb;
-  if (currentSaveMode==='single') { const c=document.getElementById('output-canvas'); thumb=c?c.toDataURL('image/jpeg',0.4):null; }
-  else if (currentSaveMode==='multi') { thumb=multiPages[0]?multiPages[0].dataUrl:null; }
-  else if (currentSaveMode==='idcard') { thumb=idFrontImage; }
-  if (!thumb) return;
-  const scan={ id:Date.now(), dataUrl:thumb, filter:currentSaveMode==='multi'?'multi ('+multiPages.length+'p)':activeFilter, date:new Date().toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}) };
+  var thumb;
+  if(currentSaveMode==='single'){var cv=document.getElementById('output-canvas');thumb=cv?cv.toDataURL('image/jpeg',0.4):null;}
+  else if(currentSaveMode==='multi'){thumb=multiPages[0]?multiPages[0].dataUrl:null;}
+  else if(currentSaveMode==='idcard'){thumb=idFrontImage;}
+  if(!thumb) return;
+  var scan={id:Date.now(),dataUrl:thumb,filter:currentSaveMode==='multi'?'multi ('+multiPages.length+'p)':activeFilter,date:new Date().toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})};
   savedScans.unshift(scan);
   localStorage.setItem('scanr_scans',JSON.stringify(savedScans.slice(0,50)));
 }
-
-function retake() { multiPages=[]; activePageIdx=0; idFrontImage=null; idBackImage=null; idCapturingFront=true; goTo('scan'); }
+function retake() {
+  multiPages=[]; activePageIdx=0; idFrontImage=null; idBackImage=null; idCapturingFront=true;
+  stopCamera(); goTo('scan');
+}
 
 // ══ DASHBOARD ══════════════════════════════════════════
 function renderDashboard() {
-  const grid=document.getElementById('scans-grid'), noScans=document.getElementById('no-scans'), count=document.getElementById('scan-count');
+  var grid=document.getElementById('scans-grid'), noScans=document.getElementById('no-scans'), count=document.getElementById('scan-count');
   savedScans=JSON.parse(localStorage.getItem('scanr_scans')||'[]');
   count.textContent=savedScans.length+' scan'+(savedScans.length!==1?'s':'')+' saved';
   if(!savedScans.length){grid.style.display='none';noScans.style.display='block';return;}
   noScans.style.display='none'; grid.style.display='grid';
-  grid.innerHTML=savedScans.map(scan=>`
-    <div class="card scan-card">
-      <div class="scan-thumb"><img src="${scan.dataUrl}" alt="Scan"/></div>
-      <div class="scan-info">
-        <div class="scan-date">${scan.date}</div>
-        <div class="scan-filter">${scan.filter}</div>
-        <div class="scan-actions">
-          <button class="scan-dl" onclick="reDownload(${scan.id})">↓</button>
-          <button class="scan-del" onclick="deleteScan(${scan.id})">🗑</button>
-        </div>
-      </div>
-    </div>`).join('');
+  grid.innerHTML=savedScans.map(function(scan){return(
+    '<div class="card scan-card">'+
+      '<div class="scan-thumb"><img src="'+scan.dataUrl+'" alt="Scan"/></div>'+
+      '<div class="scan-info">'+
+        '<div class="scan-date">'+scan.date+'</div>'+
+        '<div class="scan-filter">'+scan.filter+'</div>'+
+        '<div class="scan-actions">'+
+          '<button class="scan-dl" onclick="reDownload('+scan.id+')">↓</button>'+
+          '<button class="scan-del" onclick="deleteScan('+scan.id+')">🗑</button>'+
+        '</div>'+
+      '</div>'+
+    '</div>'
+  );}).join('');
 }
-
-function reDownload(id){const s=savedScans.find(x=>x.id===id);if(!s)return;const a=document.createElement('a');a.download='scanr-'+id+'.jpg';a.href=s.dataUrl;a.click();}
-function deleteScan(id){savedScans=savedScans.filter(s=>s.id!==id);localStorage.setItem('scanr_scans',JSON.stringify(savedScans));renderDashboard();}
+function reDownload(id){var s=savedScans.find(function(x){return x.id===id;});if(!s)return;var a=document.createElement('a');a.download='scanr-'+id+'.jpg';a.href=s.dataUrl;a.click();}
+function deleteScan(id){savedScans=savedScans.filter(function(s){return s.id!==id;});localStorage.setItem('scanr_scans',JSON.stringify(savedScans));renderDashboard();}
 
 // ══ AUTH ═══════════════════════════════════════════════
 function openModal(reason) {
-  const modal=document.getElementById('modal');
-  const title=document.getElementById('modal-title');
-  const desc=document.getElementById('modal-desc');
-  const perks=document.getElementById('modal-perks');
-  const icon=document.getElementById('modal-unlock-icon');
-  if (reason==='unlock'){title.innerHTML='UNLOCK <span style="color:var(--lime)">UNLIMITED</span>';desc.textContent="You've used your 1 free scan. Create a free account — always free.";icon.style.display='block';perks.style.display='block';}
-  else {title.textContent=isLoginMode?'SIGN IN':'WELCOME';desc.textContent=isLoginMode?'Sign in to your account.':'Create an account to save unlimited scans.';icon.style.display='none';perks.style.display='none';}
+  var modal=document.getElementById('modal');
+  var title=document.getElementById('modal-title'), desc=document.getElementById('modal-desc');
+  var perks=document.getElementById('modal-perks'), icon=document.getElementById('modal-unlock-icon');
+  if(reason==='unlock'){title.innerHTML='UNLOCK <span style="color:var(--lime)">UNLIMITED</span>';desc.textContent="You've used your 1 free scan. Create a free account — always free.";icon.style.display='block';perks.style.display='block';}
+  else{title.textContent=isLoginMode?'SIGN IN':'WELCOME';desc.textContent=isLoginMode?'Sign in to your account.':'Create an account to save unlimited scans.';icon.style.display='none';perks.style.display='none';}
   modal.classList.add('open');
   document.querySelector('#modal-form button').textContent=isLoginMode?'Sign In':'Create Free Account';
 }
-
-function closeModal() { document.getElementById('modal').classList.remove('open'); }
-
-function toggleLoginMode() {
+function closeModal(){ document.getElementById('modal').classList.remove('open'); }
+function toggleLoginMode(){
   isLoginMode=!isLoginMode;
   document.getElementById('modal-title').textContent=isLoginMode?'SIGN IN':'WELCOME';
   document.getElementById('modal-desc').textContent=isLoginMode?'Sign in to your account.':'Create an account to save unlimited scans.';
   document.querySelector('#modal-form button').textContent=isLoginMode?'Sign In':'Create Free Account';
   document.querySelector('[onclick="toggleLoginMode()"]').textContent=isLoginMode?'Create account':'Sign in';
 }
-
-function doSignup() {
-  const uname=document.getElementById('modal-username').value.trim();
-  const pw=document.getElementById('modal-password').value.trim();
-  if (!uname){alert('Username is required');return;}
-  if (!pw){alert('Password is required');return;}
+function doSignup(){
+  var uname=document.getElementById('modal-username').value.trim();
+  var pw=document.getElementById('modal-password').value.trim();
+  if(!uname){alert('Username is required');return;}
+  if(!pw){alert('Password is required');return;}
   isLoggedIn=true;
   localStorage.setItem('scanr_user','true');
   localStorage.setItem('scanr_username',uname);
   closeModal(); updateNav();
-  document.querySelectorAll('.hint').forEach(h=>h.style.display='none');
+  document.querySelectorAll('.hint').forEach(function(h){h.style.display='none';});
   showToast('✅ Welcome, '+uname+'! Unlimited scans unlocked.');
 }
-
 document.getElementById('modal').addEventListener('click',function(e){if(e.target===this)closeModal();});
 document.getElementById('save-modal').addEventListener('click',function(e){if(e.target===this)closeSaveModal();});
 
 // ══ TOAST ══════════════════════════════════════════════
-function showToast(msg) {
-  const t=document.getElementById('save-toast'); t.textContent=msg; t.classList.add('show');
-  setTimeout(()=>t.classList.remove('show'),2800);
+function showToast(msg){
+  var t=document.getElementById('save-toast'); t.textContent=msg; t.classList.add('show');
+  setTimeout(function(){t.classList.remove('show');},2800);
 }
+
+// ══ ANTI-INSPECT ═══════════════════════════════════════
+(function(){
+  document.addEventListener('contextmenu',function(e){e.preventDefault();return false;});
+  document.addEventListener('keydown',function(e){
+    if(e.key==='F12'||e.keyCode===123){e.preventDefault();return false;}
+    if(e.ctrlKey&&e.shiftKey&&['I','i','J','j','C','c'].includes(e.key)){e.preventDefault();return false;}
+    if(e.ctrlKey&&['U','u'].includes(e.key)){e.preventDefault();return false;}
+    if(e.ctrlKey&&['S','s'].includes(e.key)){e.preventDefault();return false;}
+  });
+  document.addEventListener('selectstart',function(e){
+    if(!['INPUT','TEXTAREA'].includes(e.target.tagName)){e.preventDefault();return false;}
+  });
+  document.addEventListener('dragstart',function(e){e.preventDefault();return false;});
+  document.addEventListener('copy',function(e){
+    if(!['INPUT','TEXTAREA'].includes(document.activeElement.tagName)){
+      e.clipboardData.setData('text/plain',''); e.preventDefault();
+    }
+  });
+  // DevTools size detection
+  (function devCheck(){
+    var opened=false;
+    setInterval(function(){
+      var wDiff=window.outerWidth-window.innerWidth>160;
+      var hDiff=window.outerHeight-window.innerHeight>160;
+      if((wDiff||hDiff)&&!opened){
+        opened=true;
+        document.body.innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#0a0a0a;color:#C8FF00;font-family:sans-serif;font-size:18px;text-align:center;flex-direction:column;gap:16px"><div style="font-size:48px">🔒</div><b>Access Restricted</b><div style="color:#555;font-size:13px">Developer tools are not permitted on this page.</div></div>';
+      } else if(!wDiff&&!hDiff){ opened=false; }
+    },1000);
+  })();
+})();
 </script>
 </body>
 </html>
