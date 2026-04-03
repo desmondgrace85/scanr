@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SCANR — Scan Documents Free</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0a0a0a;
+    --surface: #141414;
+    --surface2: #1a1a1a;
+    --border: #222;
+    --border2: #2a2a2a;
+    --lime: #C8FF00;
+    --text: #ffffff;
+    --muted: #999;
+    --dim: #666;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Outfit', sans-serif;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .bebas { font-family: 'Bebas Neue', sans-serif; letter-spacing: 0.04em; }
+
+  /* NAV */
+  nav {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 24px; border-bottom: 1px solid #1a1a1a;
+    position: sticky; top: 0; background: rgba(10,10,10,0.95);
+    backdrop-filter: blur(12px); z-index: 50;
+  }
+  .logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+  .logo-text { font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: 0.1em; color: #fff; }
+  .logo-text span { color: var(--lime); }
+
+  /* BUTTONS */
+  .btn-lime {
+    background: var(--lime); color: #0a0a0a; border: none;
+    padding: 13px 28px; font-size: 15px; font-weight: 600;
+    border-radius: 8px; cursor: pointer; transition: background .18s, transform .15s;
+    font-family: 'Outfit', sans-serif; display: inline-flex; align-items: center;
+    justify-content: center; gap: 8px; text-decoration: none;
+  }
+  .btn-lime:hover { background: #d9ff33; transform: translateY(-1px); }
+  .btn-outline {
+    background: transparent; color: var(--text); border: 1.5px solid #444;
+    padding: 12px 24px; font-size: 14px; font-weight: 500; border-radius: 8px;
+    cursor: pointer; transition: border-color .18s, color .18s;
+    font-family: 'Outfit', sans-serif; display: inline-flex; align-items: center; justify-content: center;
+  }
+  .btn-outline:hover { border-color: var(--lime); color: var(--lime); }
+  .btn-ghost {
+    background: none; border: none; color: #bbb; font-size: 13px;
+    cursor: pointer; font-family: 'Outfit', sans-serif; transition: color .18s;
+    display: inline-flex; align-items: center; gap: 6px; padding: 6px 0;
+  }
+  .btn-ghost:hover { color: #fff; }
+
+  /* LAYOUT */
+  .page { max-width: 520px; margin: 0 auto; padding: 0 20px; }
+  .screen { display: none; animation: fadeIn .3s ease; }
+  .screen.active { display: block; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* CARDS */
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; }
+  .tag {
+    background: var(--surface2); border: 1px solid var(--border2);
+    padding: 4px 12px; border-radius: 20px; font-size: 12px; color: #aaa;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--lime); display: inline-block; flex-shrink: 0; }
+
+  /* FEATURES GRID */
+  .features { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+  .feature { padding: 14px; }
+  .feature-icon { font-size: 22px; margin-bottom: 6px; }
+  .feature-title { font-weight: 600; font-size: 13px; margin-bottom: 3px; }
+  .feature-sub { color: #888; font-size: 12px; }
+
+  /* TABS */
+  .tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+  .tab-btn {
+    display: flex; flex-direction: column; align-items: center; padding: 14px;
+    cursor: pointer; border-radius: 12px; background: var(--surface);
+    border: 1.5px solid var(--border2); color: #e0e0e0;
+    transition: border-color .18s; font-family: 'Outfit', sans-serif;
+  }
+  .tab-btn.active { border-color: var(--lime); background: #111500; }
+  .tab-btn span { font-size: 12px; font-weight: 600; margin-top: 4px; }
+
+  /* CAMERA */
+  .cam-wrap {
+    position: relative; border-radius: 10px; overflow: hidden;
+    background: #111; min-height: 200px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  #video { width: 100%; display: none; }
+  .cam-idle { text-align: center; padding: 40px 24px; }
+  .cam-idle p { color: #888; font-size: 14px; margin-bottom: 16px; }
+
+  .scan-line {
+    position: absolute; width: 100%; height: 2px;
+    background: linear-gradient(90deg, transparent, var(--lime), transparent);
+    animation: scanline 2.2s ease-in-out infinite; pointer-events: none; display: none;
+  }
+  @keyframes scanline { 0%,100% { top: 8%; opacity: .6; } 50% { top: 88%; opacity: 1; } }
+
+  .corner { position: absolute; width: 22px; height: 22px; border-color: var(--lime); border-style: solid; pointer-events: none; display: none; }
+  .c-tl { top: 10px; left: 10px; border-width: 2px 0 0 2px; }
+  .c-tr { top: 10px; right: 10px; border-width: 2px 2px 0 0; }
+  .c-bl { bottom: 10px; left: 10px; border-width: 0 0 2px 2px; }
+  .c-br { bottom: 10px; right: 10px; border-width: 0 2px 2px 0; }
+
+  /* UPLOAD */
+  .upload-zone {
+    border: 2px dashed #333; border-radius: 12px; padding: 48px 24px;
+    text-align: center; cursor: pointer; transition: border-color .2s, background .2s;
+    background: #0f0f0f;
+  }
+  .upload-zone:hover, .upload-zone.drag-over { border-color: var(--lime); background: #111500; }
+  .upload-zone h3 { font-size: 15px; font-weight: 600; color: #e0e0e0; margin-bottom: 6px; }
+  .upload-zone p { color: #777; font-size: 13px; }
+
+  /* FILTERS */
+  .filter-label { font-size: 11px; color: #777; margin-bottom: 8px; text-transform: uppercase; letter-spacing: .1em; }
+  .filters { display: flex; gap: 8px; flex-wrap: wrap; }
+  .filter-btn {
+    background: var(--surface2); border: 1.5px solid #333;
+    padding: 9px 16px; border-radius: 8px; font-size: 13px; color: #e0e0e0;
+    cursor: pointer; transition: border-color .18s, color .18s, background .18s;
+    font-family: 'Outfit', sans-serif; font-weight: 500;
+  }
+  .filter-btn:hover { border-color: var(--lime); color: #fff; background: #1a2200; }
+  .filter-btn.active { border-color: var(--lime); color: #fff; background: #1f2800; }
+
+  /* CANVAS */
+  #output-canvas {
+    width: 100%; max-height: 360px; object-fit: contain;
+    border-radius: 8px; background: #111; display: block; margin-bottom: 14px;
+  }
+
+  /* PRIVACY BAR */
+  .privacy-bar {
+    padding: 14px 16px; background: #0d1a00; border: 1px solid #1e3300;
+    border-radius: 10px; display: flex; align-items: center; gap: 12px; margin-bottom: 24px;
+  }
+  .privacy-bar h4 { font-size: 13px; font-weight: 600; margin-bottom: 2px; }
+  .privacy-bar p { font-size: 12px; color: #777; }
+
+  /* MODAL */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.88);
+    display: none; align-items: center; justify-content: center; z-index: 1000;
+    backdrop-filter: blur(6px);
+  }
+  .modal-overlay.open { display: flex; }
+  .modal-box {
+    background: var(--surface); border: 1px solid var(--border2);
+    border-radius: 16px; padding: 40px 32px; max-width: 400px;
+    width: 90%; text-align: center; animation: fadeIn .25s ease;
+  }
+  .modal-box h2 { font-family: 'Bebas Neue', sans-serif; font-size: 30px; margin-bottom: 8px; }
+  .modal-box p { color: #999; font-size: 14px; line-height: 1.6; margin-bottom: 24px; }
+
+  /* MISC */
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .spinner {
+    width: 18px; height: 18px; border: 2px solid #333; border-top-color: var(--lime);
+    border-radius: 50%; animation: spin .7s linear infinite; display: inline-block;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .mt8 { margin-top: 8px; }
+  .mt12 { margin-top: 12px; }
+  .mt16 { margin-top: 16px; }
+  .mb14 { margin-bottom: 14px; }
+  .mb20 { margin-bottom: 20px; }
+  .hint { text-align: center; font-size: 12px; color: #555; margin-top: 12px; }
+  .hint button { background: none; border: none; color: var(--lime); font-size: 12px; cursor: pointer; font-family: 'Outfit'; }
+
+  /* DASHBOARD GRID */
+  .scans-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; }
+  .scan-card { overflow: hidden; cursor: pointer; }
+  .scan-thumb { aspect-ratio: 3/4; overflow: hidden; background: #111; }
+  .scan-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .2s; }
+  .scan-card:hover .scan-thumb img { transform: scale(1.03); }
+  .scan-info { padding: 10px 12px; }
+  .scan-date { font-size: 12px; color: #aaa; margin-bottom: 4px; }
+  .scan-filter {
+    display: inline-block; font-size: 10px; color: var(--lime); background: #0d1a00;
+    border: 1px solid #1e3300; border-radius: 4px; padding: 2px 7px; margin-bottom: 8px;
+  }
+  .scan-actions { display: flex; gap: 6px; }
+  .scan-dl {
+    flex: 1; background: var(--lime); color: #0a0a0a; border: none;
+    border-radius: 6px; padding: 7px; font-size: 12px; font-weight: 600; cursor: pointer;
+    font-family: 'Outfit';
+  }
+  .scan-del {
+    flex: 1; background: transparent; color: #666; border: 1px solid var(--border2);
+    border-radius: 6px; padding: 7px; font-size: 12px; cursor: pointer;
+    font-family: 'Outfit'; transition: color .18s;
+  }
+  .scan-del:hover { color: #ff6b6b; }
+
+  /* SIGNUP PERKS */
+  .perks { padding: 14px 16px; background: #0d1a00; border: 1px solid #1e3300; border-radius: 10px; text-align: left; margin-bottom: 0; }
+  .perks h4 { font-size: 12px; font-weight: 600; color: var(--lime); margin-bottom: 8px; }
+  .perks p { font-size: 12px; color: #ccc; line-height: 2.1; }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a class="logo" href="#" onclick="goTo('landing')">
+    <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+      <rect x="2" y="2" width="8" height="8" rx="1.5" stroke="#C8FF00" stroke-width="1.8"/>
+      <rect x="18" y="2" width="8" height="8" rx="1.5" stroke="#C8FF00" stroke-width="1.8"/>
+      <rect x="2" y="18" width="8" height="8" rx="1.5" stroke="#C8FF00" stroke-width="1.8"/>
+      <rect x="12" y="12" width="16" height="16" rx="2" fill="#C8FF00"/>
+      <rect x="15" y="15" width="10" height="10" rx="1" fill="#0a0a0a"/>
+    </svg>
+    <span class="logo-text">SCAN<span>R</span></span>
+  </a>
+  <div style="display:flex;align-items:center;gap:10px">
+    <span class="tag"><span class="dot"></span>Free</span>
+    <button class="btn-outline" style="padding:8px 18px;font-size:13px" onclick="openModal('signin')">Sign In</button>
+  </div>
+</nav>
+
+<!-- SCREENS -->
+<div class="page">
+
+  <!-- LANDING -->
+  <div id="screen-landing" class="screen active">
+    <div style="text-align:center;padding:48px 16px 36px">
+      <div class="tag" style="margin:0 auto 20px;width:fit-content"><span class="dot"></span>No downloads. No subscriptions.</div>
+      <h1 class="bebas" style="font-size:clamp(56px,14vw,78px);line-height:.92;margin-bottom:16px">
+        SCAN ANY<br><span style="color:var(--lime)">DOCUMENT</span><br>INSTANTLY
+      </h1>
+      <p style="color:var(--muted);font-size:15px;max-width:300px;margin:0 auto 30px;line-height:1.65">
+        Pro-quality scans right from your browser. Clean, fast, completely free.
+      </p>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:12px">
+        <button class="btn-lime" style="font-size:16px;padding:16px 52px;border-radius:10px" onclick="goTo('scan')">
+          Start Scanning — It's Free
+        </button>
+        <span style="color:var(--dim);font-size:13px">1 free scan · No account needed</span>
+      </div>
+    </div>
+
+    <div class="features">
+      <div class="card feature"><div class="feature-icon">📄</div><div class="feature-title">Documents</div><div class="feature-sub">IDs, contracts, forms</div></div>
+      <div class="card feature"><div class="feature-icon">🎨</div><div class="feature-title">Smart Filters</div><div class="feature-sub">B&W, enhance, vivid</div></div>
+      <div class="card feature"><div class="feature-icon">⚡</div><div class="feature-title">Instant Export</div><div class="feature-sub">JPG, no watermarks</div></div>
+    </div>
+
+    <div class="privacy-bar">
+      <span style="color:var(--lime);font-size:20px;flex-shrink:0">🔒</span>
+      <div>
+        <h4>100% Private &amp; Secure</h4>
+        <p>All processing happens in your browser. Nothing is uploaded to any server.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCAN -->
+  <div id="screen-scan" class="screen">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin:20px 0">
+      <button class="btn-ghost" onclick="goTo('landing')">← Back</button>
+      <span class="bebas" style="font-size:18px;color:var(--lime)">NEW SCAN</span>
+    </div>
+
+    <div class="tabs">
+      <button class="tab-btn active" id="tab-cam" onclick="switchTab('camera')">
+        <span style="font-size:22px">📷</span><span>Use Camera</span>
+      </button>
+      <button class="tab-btn" id="tab-upl" onclick="switchTab('upload')">
+        <span style="font-size:22px">📁</span><span>Upload File</span>
+      </button>
+    </div>
+
+    <!-- Camera panel -->
+    <div id="camera-panel">
+      <div class="cam-wrap" id="cam-wrap">
+        <div class="cam-idle" id="cam-idle">
+          <div style="font-size:40px;margin-bottom:12px">📷</div>
+          <p>Allow camera access to start scanning</p>
+          <button class="btn-lime" onclick="startCamera()">Open Camera</button>
+        </div>
+        <video id="video" autoplay playsinline muted></video>
+        <div class="scan-line" id="scan-line"></div>
+        <div class="corner c-tl" id="c-tl"></div>
+        <div class="corner c-tr" id="c-tr"></div>
+        <div class="corner c-bl" id="c-bl"></div>
+        <div class="corner c-br" id="c-br"></div>
+      </div>
+      <div id="cam-btn" style="display:none;margin-top:12px">
+        <button class="btn-lime" style="width:100%;padding:14px;font-size:15px" onclick="capturePhoto()">Capture Document</button>
+      </div>
+    </div>
+
+    <!-- Upload panel -->
+    <div id="upload-panel" style="display:none">
+      <div class="upload-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
+        <div style="font-size:40px;margin-bottom:12px">📎</div>
+        <h3>Drop your file here</h3>
+        <p>JPG, PNG, HEIC · Max 20MB</p>
+      </div>
+      <input type="file" id="file-input" accept="image/*" style="display:none" onchange="handleFile(event)">
+    </div>
+  </div>
+
+  <!-- PREVIEW -->
+  <div id="screen-preview" class="screen">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin:20px 0">
+      <button class="btn-ghost" onclick="retake()">← Rescan</button>
+      <span class="bebas" style="font-size:18px;color:var(--lime)">PREVIEW</span>
+    </div>
+
+    <canvas id="output-canvas"></canvas>
+
+    <div class="mb14">
+      <div class="filter-label">Filter Mode</div>
+      <div class="filters">
+        <button class="filter-btn active" onclick="applyFilter('original',this)">Original</button>
+        <button class="filter-btn" onclick="applyFilter('bw',this)">B&W</button>
+        <button class="filter-btn" onclick="applyFilter('enhance',this)">Enhanced</button>
+        <button class="filter-btn" onclick="applyFilter('document',this)">Document</button>
+        <button class="filter-btn" onclick="applyFilter('vivid',this)">Vivid</button>
+      </div>
+    </div>
+
+    <div class="row">
+      <button class="btn-outline" onclick="retake()">Retake</button>
+      <button class="btn-lime" onclick="downloadScan()" id="dl-btn">Download Scan</button>
+    </div>
+    <p class="hint">1 free scan · <button onclick="openModal('unlock')">Sign up for unlimited →</button></p>
+  </div>
+
+  <!-- DASHBOARD (local) -->
+  <div id="screen-dashboard" class="screen">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin:24px 0 20px">
+      <div>
+        <h1 class="bebas" style="font-size:34px;line-height:1">MY <span style="color:var(--lime)">SCANS</span></h1>
+        <p style="color:var(--dim);font-size:13px;margin-top:4px" id="scan-count">0 scans saved</p>
+      </div>
+      <button class="btn-lime" style="padding:10px 20px;font-size:13px" onclick="goTo('scan')">+ New Scan</button>
+    </div>
+    <div id="scans-grid" class="scans-grid"></div>
+    <div id="no-scans" style="text-align:center;padding:60px 24px;display:none">
+      <div style="font-size:48px;margin-bottom:16px">📭</div>
+      <div class="bebas" style="font-size:24px;margin-bottom:8px">NO SCANS YET</div>
+      <p style="color:var(--dim);font-size:14px;margin-bottom:24px">Your scanned documents will appear here.</p>
+      <button class="btn-lime" onclick="goTo('scan')">Scan Your First Document</button>
+    </div>
+  </div>
+
+</div><!-- end .page -->
+
+<!-- SIGNUP MODAL -->
+<div class="modal-overlay" id="modal">
+  <div class="modal-box">
+    <div id="modal-unlock-icon" style="font-size:36px;margin-bottom:14px;display:none">🔓</div>
+    <h2 id="modal-title">WELCOME BACK</h2>
+    <p id="modal-desc">Sign in to save scans and access them from any device.</p>
+    <div id="modal-email-form" style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px">
+      <input type="email" id="modal-email" placeholder="your@email.com"
+        style="background:#1a1a1a;border:1.5px solid #333;color:#fff;padding:13px 16px;border-radius:8px;font-size:14px;font-family:'Outfit',sans-serif;outline:none;width:100%"
+        onfocus="this.style.borderColor='#C8FF00'" onblur="this.style.borderColor='#333'"
+      />
+      <button class="btn-lime" style="width:100%;padding:14px" onclick="fakeSignup()">Create Free Account</button>
+      <button class="btn-outline" style="width:100%;padding:14px" onclick="fakeSignup()">Continue with Google</button>
+    </div>
+    <div id="modal-perks" class="perks" style="display:none">
+      <h4>Free account includes:</h4>
+      <p>✓ Unlimited scans &amp; downloads<br>✓ Scan history saved securely<br>✓ All filters &amp; export formats<br>✓ No watermarks. Ever.</p>
+    </div>
+    <button class="btn-ghost" style="margin-top:14px;color:var(--dim)" onclick="closeModal()">Maybe later</button>
+  </div>
+</div>
+
+<script>
+  // ─── State ────────────────────────────────────────────────
+  let currentScreen = 'landing'
+  let capturedImage = null
+  let activeFilter  = 'original'
+  let videoStream   = null
+  let freeUsed      = parseInt(localStorage.getItem('scanr_free') || '0')
+  let savedScans    = JSON.parse(localStorage.getItem('scanr_scans') || '[]')
+  let isLoggedIn    = localStorage.getItem('scanr_user') === 'true'
+
+  // ─── Navigation ───────────────────────────────────────────
+  function goTo(screen) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'))
+    document.getElementById('screen-' + screen).classList.add('active')
+    currentScreen = screen
+    if (screen !== 'scan') stopCamera()
+    if (screen === 'dashboard') renderDashboard()
+    window.scrollTo(0, 0)
+  }
+
+  // ─── Camera ───────────────────────────────────────────────
+  async function startCamera() {
+    try {
+      videoStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 } }, audio: false
+      })
+      const video = document.getElementById('video')
+      video.srcObject = videoStream
+      video.style.display = 'block'
+      document.getElementById('cam-idle').style.display = 'none'
+      document.getElementById('scan-line').style.display = 'block'
+      ;['c-tl','c-tr','c-bl','c-br'].forEach(c => document.getElementById(c).style.display = 'block')
+      document.getElementById('cam-btn').style.display = 'block'
+    } catch {
+      document.getElementById('cam-idle').innerHTML = '<div style="font-size:28px;margin-bottom:10px">⚠️</div><p>Camera access denied.<br/>Use the Upload option instead.</p>'
+    }
+  }
+
+  function stopCamera() {
+    if (videoStream) { videoStream.getTracks().forEach(t => t.stop()); videoStream = null }
+  }
+
+  function capturePhoto() {
+    const video = document.getElementById('video')
+    const canvas = document.createElement('canvas')
+    canvas.width = video.videoWidth || 640
+    canvas.height = video.videoHeight || 480
+    canvas.getContext('2d').drawImage(video, 0, 0)
+    capturedImage = canvas.toDataURL('image/jpeg', 0.95)
+    stopCamera()
+    goTo('preview')
+    renderPreview()
+  }
+
+  // ─── Upload ───────────────────────────────────────────────
+  function handleFile(e) {
+    const file = e.target.files[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = ev => { capturedImage = ev.target.result; goTo('preview'); renderPreview() }
+    reader.readAsDataURL(file)
+  }
+
+  const dropZone = document.getElementById('drop-zone')
+  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over') })
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'))
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault(); dropZone.classList.remove('drag-over')
+    const file = e.dataTransfer.files[0]
+    if (file && file.type.startsWith('image/')) {
+      const reader = new FileReader()
+      reader.onload = ev => { capturedImage = ev.target.result; goTo('preview'); renderPreview() }
+      reader.readAsDataURL(file)
+    }
+  })
+
+  function switchTab(tab) {
+    document.getElementById('camera-panel').style.display = tab === 'camera' ? 'block' : 'none'
+    document.getElementById('upload-panel').style.display = tab === 'upload' ? 'block' : 'none'
+    document.getElementById('tab-cam').classList.toggle('active', tab === 'camera')
+    document.getElementById('tab-upl').classList.toggle('active', tab === 'upload')
+    if (tab !== 'camera') stopCamera()
+  }
+
+  // ─── Preview & Filters ────────────────────────────────────
+  let previewImg = null
+
+  function renderPreview() {
+    const canvas = document.getElementById('output-canvas')
+    const img = new Image()
+    img.onload = () => {
+      previewImg = img
+      canvas.width = img.width
+      canvas.height = img.height
+      applyFilterToCanvas(canvas.getContext('2d'), img, activeFilter)
+    }
+    img.src = capturedImage
+    // reset filter UI
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'))
+    document.querySelector('.filter-btn').classList.add('active')
+    activeFilter = 'original'
+    // show/hide free hint
+    document.querySelector('.hint').style.display = isLoggedIn ? 'none' : 'block'
+  }
+
+  function applyFilter(type, btn) {
+    activeFilter = type
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'))
+    btn.classList.add('active')
+    const canvas = document.getElementById('output-canvas')
+    applyFilterToCanvas(canvas.getContext('2d'), previewImg, type)
+  }
+
+  function applyFilterToCanvas(ctx, img, f) {
+    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
+    ctx.drawImage(img, 0, 0)
+    if (f === 'original') return
+    const d = ctx.getImageData(0, 0, ctx.canvas.width, ctx.canvas.height), px = d.data
+    for (let i = 0; i < px.length; i += 4) {
+      const r = px[i], g = px[i+1], b = px[i+2]
+      if (f === 'bw') {
+        px[i] = px[i+1] = px[i+2] = 0.299*r + 0.587*g + 0.114*b
+      } else if (f === 'enhance') {
+        const gr = 0.299*r + 0.587*g + 0.114*b
+        px[i] = px[i+1] = px[i+2] = gr < 128 ? Math.max(0, gr*0.65) : Math.min(255, gr*1.35+15)
+      } else if (f === 'document') {
+        const gr = 0.299*r + 0.587*g + 0.114*b
+        px[i] = px[i+1] = px[i+2] = gr > 145 ? 255 : Math.max(0, gr*0.4)
+      } else if (f === 'vivid') {
+        const av = (r+g+b)/3
+        px[i] = Math.min(255, r + (r-av)*0.5)
+        px[i+1] = Math.min(255, g + (g-av)*0.5)
+        px[i+2] = Math.min(255, b + (b-av)*0.5)
+      }
+    }
+    ctx.putImageData(d, 0, 0)
+  }
+
+  // ─── Download ─────────────────────────────────────────────
+  function downloadScan() {
+    if (!isLoggedIn && freeUsed >= 1) { openModal('unlock'); return }
+    const canvas = document.getElementById('output-canvas')
+    const a = document.createElement('a')
+    a.download = 'scanr-' + Date.now() + '.jpg'
+    a.href = canvas.toDataURL('image/jpeg', 0.92)
+    a.click()
+
+    // Save locally
+    const scan = { id: Date.now(), dataUrl: canvas.toDataURL('image/jpeg', 0.7), filter: activeFilter, date: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) }
+    savedScans.unshift(scan)
+    localStorage.setItem('scanr_scans', JSON.stringify(savedScans.slice(0, 50)))
+
+    if (!isLoggedIn) {
+      freeUsed++
+      localStorage.setItem('scanr_free', freeUsed)
+    }
+  }
+
+  function retake() { goTo('scan') }
+
+  // ─── Dashboard ────────────────────────────────────────────
+  function renderDashboard() {
+    const grid = document.getElementById('scans-grid')
+    const noScans = document.getElementById('no-scans')
+    const count = document.getElementById('scan-count')
+    savedScans = JSON.parse(localStorage.getItem('scanr_scans') || '[]')
+    count.textContent = savedScans.length + ' scan' + (savedScans.length !== 1 ? 's' : '') + ' saved'
+    if (savedScans.length === 0) { grid.style.display = 'none'; noScans.style.display = 'block'; return }
+    noScans.style.display = 'none'; grid.style.display = 'grid'
+    grid.innerHTML = savedScans.map(scan => `
+      <div class="card scan-card">
+        <div class="scan-thumb"><img src="${scan.dataUrl}" alt="Scan" /></div>
+        <div class="scan-info">
+          <div class="scan-date">${scan.date}</div>
+          <div class="scan-filter">${scan.filter}</div>
+          <div class="scan-actions">
+            <button class="scan-dl" onclick="reDownload(${scan.id})">↓</button>
+            <button class="scan-del" onclick="deleteScan(${scan.id})">🗑</button>
+          </div>
+        </div>
+      </div>
+    `).join('')
+  }
+
+  function reDownload(id) {
+    const scan = savedScans.find(s => s.id === id)
+    if (!scan) return
+    const a = document.createElement('a')
+    a.download = 'scanr-' + id + '.jpg'
+    a.href = scan.dataUrl; a.click()
+  }
+
+  function deleteScan(id) {
+    savedScans = savedScans.filter(s => s.id !== id)
+    localStorage.setItem('scanr_scans', JSON.stringify(savedScans))
+    renderDashboard()
+  }
+
+  // ─── Auth Modal ───────────────────────────────────────────
+  function openModal(reason) {
+    const modal = document.getElementById('modal')
+    const title = document.getElementById('modal-title')
+    const desc = document.getElementById('modal-desc')
+    const icon = document.getElementById('modal-unlock-icon')
+    const perks = document.getElementById('modal-perks')
+    if (reason === 'unlock') {
+      title.innerHTML = 'UNLOCK <span style="color:var(--lime)">UNLIMITED</span>'
+      desc.textContent = "You've used your 1 free scan. Create a free account for unlimited scans — always free."
+      icon.style.display = 'block'
+      perks.style.display = 'block'
+    } else {
+      title.textContent = 'WELCOME BACK'
+      desc.textContent = 'Sign in to access your scan history and unlimited downloads.'
+      icon.style.display = 'none'
+      perks.style.display = 'none'
+    }
+    modal.classList.add('open')
+  }
+
+  function closeModal() { document.getElementById('modal').classList.remove('open') }
+
+  function fakeSignup() {
+    // In production: replace this with real auth (Supabase, Firebase, etc.)
+    isLoggedIn = true
+    localStorage.setItem('scanr_user', 'true')
+    closeModal()
+    document.querySelector('.hint').style.display = 'none'
+    alert('✅ You\'re signed in! Unlimited scans unlocked.')
+  }
+
+  document.getElementById('modal').addEventListener('click', function(e) {
+    if (e.target === this) closeModal()
+  })
+
+  // ─── Nav: show dashboard link if logged in ────────────────
+  if (isLoggedIn) {
+    const nav = document.querySelector('nav div')
+    const dashBtn = document.createElement('button')
+    dashBtn.className = 'btn-ghost'
+    dashBtn.style.fontSize = '13px'
+    dashBtn.textContent = 'My Scans'
+    dashBtn.onclick = () => goTo('dashboard')
+    nav.prepend(dashBtn)
+  }
+</script>
+</body>
+</html>
