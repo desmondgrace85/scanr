@@ -122,14 +122,20 @@ nav { display: flex; align-items: center; justify-content: space-between; paddin
 .sides-btn.active { background: rgba(200,255,0,0.15); color: var(--lime); font-weight: 600; }
 
 /* ── CAMERA WRAP ── */
-.cam-outer { position: relative; background: #000; border-radius: 12px; overflow: hidden; margin-bottom: 12px; }
-.cam-outer video { width: 100%; display: block; max-height: 55vh; object-fit: cover; }
+.cam-outer { position: relative; background: #000; border-radius: 12px; overflow: hidden; margin-bottom: 12px; max-height: 42vh; }
+.cam-outer video { width: 100%; display: block; max-height: 42vh; object-fit: cover; }
 
-/* FIX: ID card camera — use exact ID card aspect ratio so card fills the frame naturally */
-.cam-outer.id-mode { aspect-ratio: 85.6 / 54; max-height: none; }
+/* ID card camera — landscape aspect ratio (credit card shape) */
+.cam-outer.id-mode { aspect-ratio: 85.6 / 54; max-height: none; height: auto; width: 100%; }
 .cam-outer.id-mode video { width: 100%; height: 100%; position: absolute; inset: 0; max-height: none; object-fit: cover; }
 
-.cam-outer.passport-mode video { max-height: 60vw; aspect-ratio: 0.707/1; object-fit: cover; width: 100%; }
+/* Passport mode — portrait, roughly A5 ratio */
+.cam-outer.passport-mode { aspect-ratio: 125 / 88; max-height: none; height: auto; width: 88%; margin-left: auto; margin-right: auto; }
+.cam-outer.passport-mode video { width: 100%; height: 100%; position: absolute; inset: 0; max-height: none; object-fit: cover; }
+
+/* Document mode — A4 portrait ratio */
+.cam-outer.document-mode { aspect-ratio: 210 / 297; max-height: 48vh; width: auto; margin-left: auto; margin-right: auto; }
+.cam-outer.document-mode video { width: 100%; height: 100%; position: absolute; inset: 0; max-height: none; object-fit: cover; }
 .cam-idle { text-align: center; padding: 36px 20px; }
 .cam-idle p { color: #888; font-size: 13px; margin-bottom: 14px; }
 .cam-overlay { position: absolute; inset: 0; pointer-events: none; }
@@ -144,7 +150,12 @@ nav { display: flex; align-items: center; justify-content: space-between; paddin
 /* ── ID CARD DASHED LINE ── */
 .id-divider { position: absolute; top: 50%; left: 0; right: 0; height: 0; border-top: 1.5px dashed rgba(200,255,0,0.5); display: none; }
 
-/* ── CAPTURE BTN ── */
+/* ── CAMERA THUMB STRIP (like reference app) ── */
+.cam-thumb-strip-inner { display: flex; flex-direction: row; gap: 3px; align-items: center; }
+.cam-thumb-item { width: 44px; height: 58px; border-radius: 5px; overflow: hidden; border: 1.5px solid rgba(200,255,0,0.6); background: #111; position: relative; flex-shrink: 0; }
+.cam-thumb-item img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.cam-thumb-count { position: absolute; top: 2px; right: 3px; background: var(--lime); color: #000; font-size: 9px; font-weight: 700; padding: 1px 4px; border-radius: 3px; font-family: 'Outfit'; }
+.cam-save-btn { background: var(--lime); color: #0a0a0a; border: none; padding: 7px 12px; border-radius: 7px; font-size: 12px; font-weight: 700; cursor: pointer; font-family: 'Outfit'; margin-left: 4px; white-space: nowrap; }
 .capture-row { display: flex; align-items: center; justify-content: center; gap: 16px; margin-bottom: 12px; }
 .capture-btn { width: 64px; height: 64px; border-radius: 50%; background: var(--lime); border: 4px solid rgba(200,255,0,0.3); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: transform .15s, background .15s; animation: captureGlow 2s ease-in-out infinite; }
 .capture-btn:active { transform: scale(0.92); }
@@ -503,7 +514,9 @@ body { -webkit-touch-callout: none; }
       </div>
     </div>
     <div id="cam-btn-row" style="display:none">
-      <div class="capture-row">
+      <div class="capture-row" style="position:relative;justify-content:center;">
+        <!-- Captured pages thumbnail strip (shown bottom-right like reference app) -->
+        <div id="cam-thumb-strip" style="display:none;position:absolute;right:0;top:50%;transform:translateY(-50%);flex-direction:row;gap:4px;align-items:center;" class="cam-thumb-strip-inner"></div>
         <button class="capture-btn" onclick="capturePhoto()" title="Capture">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8" fill="#0a0a0a"/></svg>
         </button>
@@ -525,7 +538,7 @@ body { -webkit-touch-callout: none; }
 <!-- ══ CROP ══ -->
 <div id="screen-crop" class="screen">
   <div style="display:flex;align-items:center;justify-content:space-between;margin:16px 0">
-    <button class="btn-ghost" onclick="goTo('scan')">← Retake</button>
+    <button class="btn-ghost" onclick="cropGoBack()">← Back</button>
     <span class="bebas" style="font-size:16px;color:var(--lime)">CROP & ADJUST</span>
   </div>
   <div class="crop-ratio-btns">
@@ -555,7 +568,7 @@ body { -webkit-touch-callout: none; }
 <!-- ══ PREVIEW ══ -->
 <div id="screen-preview" class="screen">
   <div style="display:flex;align-items:center;justify-content:space-between;margin:16px 0">
-    <button class="btn-ghost" onclick="retake()">← Rescan</button>
+    <button class="btn-ghost" onclick="previewGoBack()">← Back</button>
     <span class="bebas" style="font-size:16px;color:var(--lime)">PREVIEW</span>
   </div>
   <canvas id="output-canvas"></canvas>
@@ -586,7 +599,7 @@ body { -webkit-touch-callout: none; }
 <!-- ══ MULTI PREVIEW ══ -->
 <div id="screen-multi" class="screen">
   <div style="display:flex;align-items:center;justify-content:space-between;margin:16px 0">
-    <button class="btn-ghost" onclick="retake()">← Rescan</button>
+    <button class="btn-ghost" onclick="addAnotherPage()">← Add More</button>
     <span class="bebas" style="font-size:16px;color:var(--lime)">MULTI SCAN</span>
   </div>
   <div class="filter-label" style="margin-bottom:5px">Pages (<span id="multi-count">0</span>)</div>
@@ -847,6 +860,9 @@ function setScanType(type, el) {
   } else if (type === 'passport') {
     sidesRow.style.display = 'none'; pagesRow.style.display = 'block';
     camOuter.classList.add('passport-mode');
+  } else if (type === 'document' || type === 'receipt') {
+    sidesRow.style.display = 'none'; pagesRow.style.display = 'block';
+    camOuter.classList.add('document-mode');
   } else {
     sidesRow.style.display = 'none'; pagesRow.style.display = 'block';
   }
@@ -1020,7 +1036,42 @@ function retakeIdSide(side) {
   setTimeout(startCamera, 400);
 }
 
-// ══ UPLOAD ═════════════════════════════════════════════
+// ══ BACK NAVIGATION ════════════════════════════════════
+function cropGoBack() {
+  // If we came here from idcard cropping, go back to idcard
+  if (retakingIdSide !== null) { retakingIdSide = null; goTo('idcard'); return; }
+  goTo('scan');
+  // Restore correct camera mode
+  var camOuter = document.getElementById('cam-outer');
+  if (scanType === 'id') camOuter.className = 'cam-outer id-mode';
+  else if (scanType === 'passport') camOuter.className = 'cam-outer passport-mode';
+  else camOuter.className = 'cam-outer document-mode';
+  document.getElementById('cam-btn-row').style.display = 'block';
+  setTimeout(function(){ startCamera(); if(scanCount==='multi') updateCamThumbStrip(); }, 200);
+}
+function previewGoBack() {
+  // Go back to crop screen with the current captured image
+  goTo('crop');
+  var img = document.getElementById('crop-img');
+  img.onload = initCropUI;
+  img.src = capturedImage;
+}
+function updateCamThumbStrip() {
+  var strip = document.getElementById('cam-thumb-strip');
+  if (!strip) return;
+  if (scanCount !== 'multi' || multiPages.length === 0) { strip.style.display = 'none'; return; }
+  strip.style.display = 'flex';
+  var last = multiPages[multiPages.length - 1];
+  strip.innerHTML =
+    '<div class="cam-thumb-item">' +
+      '<img src="' + last.dataUrl + '"/>' +
+      '<div class="cam-thumb-count">' + multiPages.length + '</div>' +
+    '</div>' +
+    '<button class="cam-save-btn" onclick="saveFromCamera()">Save</button>';
+}
+function saveFromCamera() {
+  goTo('multi'); renderMultiStrip(); renderMultiCanvas();
+}
 function handleFile(e) {
   var file = e.target.files[0]; if (!file) return;
   var reader = new FileReader();
@@ -1180,7 +1231,13 @@ function goToPreview() {
   if (scanCount === 'multi') {
     multiPages.push({ dataUrl: capturedImage, filter: 'original' });
     activePageIdx = multiPages.length - 1;
-    goTo('multi'); renderMultiStrip(); renderMultiCanvas();
+    // Go back to scan screen for next capture, show thumb strip
+    goTo('scan');
+    // Restore camera in correct mode
+    var camOuter = document.getElementById('cam-outer');
+    camOuter.className = 'cam-outer document-mode';
+    document.getElementById('cam-btn-row').style.display = 'block';
+    setTimeout(function(){ startCamera(); updateCamThumbStrip(); }, 300);
   } else {
     goTo('preview'); renderPreview();
   }
@@ -1229,7 +1286,12 @@ function rotateImage() {
 function deletePreview() { if (confirm('Delete this scan?')) retake(); }
 function addPageFromPreview() {
   multiPages.push({ dataUrl: capturedImage, filter: activeFilter });
-  scanCount = 'multi'; goTo('scan');
+  scanCount = 'multi';
+  goTo('scan');
+  var camOuter = document.getElementById('cam-outer');
+  camOuter.className = 'cam-outer document-mode';
+  document.getElementById('cam-btn-row').style.display = 'block';
+  setTimeout(function(){ startCamera(); updateCamThumbStrip(); }, 300);
 }
 
 // ══ MULTI ══════════════════════════════════════════════
@@ -1291,7 +1353,14 @@ function deleteMultiPage() {
   activePageIdx = Math.max(0,activePageIdx-1);
   renderMultiStrip(); renderMultiCanvas();
 }
-function addAnotherPage() { goTo('scan'); scanCount='multi'; }
+function addAnotherPage() {
+  scanCount = 'multi';
+  goTo('scan');
+  var camOuter = document.getElementById('cam-outer');
+  camOuter.className = 'cam-outer document-mode';
+  document.getElementById('cam-btn-row').style.display = 'block';
+  setTimeout(function(){ startCamera(); updateCamThumbStrip(); }, 300);
+}
 
 // ══ ID CARD FILTER ═════════════════════════════════════
 function toggleIdFilters() {
@@ -1324,7 +1393,18 @@ function applyFilterToCanvas(ctx, img, f) {
     var r=px[i],g=px[i+1],b=px[i+2];
     if(f==='bw'){px[i]=px[i+1]=px[i+2]=0.299*r+0.587*g+0.114*b;}
     else if(f==='enhance'){var gr=0.299*r+0.587*g+0.114*b;px[i]=px[i+1]=px[i+2]=gr<128?Math.max(0,gr*0.65):Math.min(255,gr*1.35+15);}
-    else if(f==='document'){var gr2=0.299*r+0.587*g+0.114*b;px[i]=px[i+1]=px[i+2]=gr2>145?255:Math.max(0,gr2*0.4);}
+    else if(f==='document'){
+      // Document filter: colored scan look — brighten background, boost contrast, keep colors
+      // Lift shadows toward white (paper-like), increase contrast on midtones
+      var lum=0.299*r+0.587*g+0.114*b;
+      // Background lift: if pixel is bright, push toward pure white
+      var lift=lum>140 ? (lum-140)/(255-140) : 0; // 0..1
+      px[i]  =Math.min(255, Math.round(r   + (255-r)  *lift*0.75));
+      px[i+1]=Math.min(255, Math.round(g   + (255-g)  *lift*0.75));
+      px[i+2]=Math.min(255, Math.round(b   + (255-b)  *lift*0.75));
+      // Darken dark pixels (ink) slightly for crispness
+      if(lum<90){px[i]=Math.max(0,Math.round(px[i]*0.7));px[i+1]=Math.max(0,Math.round(px[i+1]*0.7));px[i+2]=Math.max(0,Math.round(px[i+2]*0.7));}
+    }
     else if(f==='vivid'){var av=(r+g+b)/3;px[i]=Math.min(255,r+(r-av)*0.5);px[i+1]=Math.min(255,g+(g-av)*0.5);px[i+2]=Math.min(255,b+(b-av)*0.5);}
   }
   ctx.putImageData(d,0,0);
@@ -1460,12 +1540,19 @@ function savePDF() {
 
   var blob = new Blob([pdfBytes], { type: 'application/pdf' });
   var url  = URL.createObjectURL(blob);
-  var a    = document.createElement('a');
-  a.href     = url;
-  a.download = 'scanr-' + Date.now() + '.pdf';
-  document.body.appendChild(a);
-  a.click();
-  setTimeout(function(){ URL.revokeObjectURL(url); document.body.removeChild(a); }, 1000);
+  // iOS Safari doesn't support anchor download for PDFs — open in new tab triggers share sheet
+  var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+  if (isIOS) {
+    window.open(url, '_blank');
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 10000);
+  } else {
+    var a = document.createElement('a');
+    a.href     = url;
+    a.download = 'scanr-' + Date.now() + '.pdf';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function(){ URL.revokeObjectURL(url); document.body.removeChild(a); }, 1000);
+  }
 }
 
 function saveDocx() {
